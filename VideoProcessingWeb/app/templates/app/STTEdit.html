@@ -1,0 +1,58 @@
+﻿{% extends "app/layout.html" %}
+
+{% block content %}
+
+<h2>{{ title }}.</h2>
+<h3>{{ message }}</h3>
+
+{% load staticfiles %}
+<link rel="stylesheet" type="text/css" href="{% static 'app/bootstrap-table/bootstrap-table.css' %}" />
+<script src="{% static 'app/bootstrap-table/bootstrap-table.js' %}"></script>
+
+<script type="text/javascript">
+        /*初始化table数据*/
+        $(function(){
+            $("#SubTable").bootstrapTable({
+                pageSize: 15
+            });
+            $("#SubTable").on("click-row.bs.table",function(e,row,ele){
+                VideoPlayer.currentTime=$(ele).find("td").first().html();
+                VideoPlayer.play();
+            });
+        });
+        function queryParams() {
+            return {
+                
+            };
+        }
+</script>
+
+<div class="row">
+<div class="col-md-4">
+    <video id="VideoPlayer" src="{{ VideoFilePath }}" style="width:360px; height:220px" controls="controls">
+        您的浏览器不支持HTML5 Video
+    </video>
+</div>
+<div class="col-md-8">
+    <table id="SubTable" data-query-params="queryParams" data-pagination="true">
+        <thead>
+        <tr>
+            <th data-field="StartTime">起始</th>
+            <th data-field="EndTime">结束</th>
+            <th data-field="Text">文字</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in li %}
+            <tr>
+                <td>{{ item.StartTime }}</td>
+                <td>{{ item.EndTime }}</td>
+                <td>{{ item.Text }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+
+{% endblock %}

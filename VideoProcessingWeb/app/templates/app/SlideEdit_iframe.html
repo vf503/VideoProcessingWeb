@@ -1,0 +1,1353 @@
+﻿{% extends "app/LayoutLite.html" %}
+
+{% block content %}
+
+{% load staticfiles %}
+<link rel="stylesheet" type="text/css" href="{% static 'app/bootstrap-table/bootstrap-table.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'app/jquery-ui/jquery-ui.css' %}" />
+<script src="{% static 'app/scripts/jquery.cookie.js' %}"></script>
+<script src="{% static 'app/bootstrap-table/bootstrap-table.js' %}"></script>
+<script src="{% static 'app/jquery-ui/jquery-ui.js' %}"></script>
+<!-- -->
+<style type="text/css">
+    #FullTextBox{
+        height:700px;
+        overflow-y:scroll;
+    }
+    #FullTextPanel{
+        height:700px;
+        overflow-y:scroll;
+    }
+    .SentenceDefault{
+        border:solid 1px LightSteelBlue;
+        padding:2px 2px 2px 5px;
+        margin:0px 2px 5px 2px;
+        display:block;
+        float:left
+    }
+     .SentenceCurrentSkip{
+        border:solid 1px SteelBlue;
+        color:white ;
+        background:lightblue;
+        padding:2px 2px 2px 5px;
+        margin:0px 2px 5px 2px;
+        display:block;
+        float:left
+    }
+     .SentenceCurrent{
+        border:solid 1px SteelBlue;
+        color:MidnightBlue;
+        padding:2px 2px 2px 5px;
+        margin:0px 2px 5px 2px;
+        display:block;
+        float:left
+    }
+    .SentenceBeginningOfParagraphDefault{
+        border:solid 1px LightSteelBlue;
+        padding:2px 2px 2px 5px;
+        margin:0px 2px 5px 35px;
+        display:block;
+        float:left;
+        clear:left
+    }
+    .SentenceBeginningOfParagraphCurrent{
+        border:solid 1px LightSteelBlue;
+        color:MidnightBlue;
+        padding:2px 2px 2px 5px;
+        margin:0px 2px 5px 35px;
+        display:block;
+        float:left;
+        clear:left;   
+    }
+    .BtnBeginningOfParagraph{
+        margin:0px 2px 5px 35px;
+        height:20px;
+        display:block;
+        float:left;
+        clear:left;       
+    }
+    .SubTitleBox{
+        width:100%;
+    }
+    .SubTitleBox span{
+        word-break:normal;
+        display:block; 
+        white-space:pre-wrap;
+        word-wrap:break-word;
+        overflow:hidden;
+    }
+    .SubTitleDelBtn{
+        margin:0px 2px 5px 35px;
+        height:20px;
+        display:block;
+        float:left;
+        clear:left;  
+    }
+    .SlideDelBtn{
+        margin:0px 2px 0px 0px;
+        float:left;
+        height:20px;
+        display:block;
+    }
+    .SubTitleLi{
+        border:0px;
+        padding:2px 2px 2px 5px;
+        margin:0px 2px 5px 2px;
+        list-style: none;
+    }
+    .SubTitleNaviText{
+        border:solid 1px LightSteelBlue;
+        padding:0px 2px 0px 5px;
+        margin:0px 2px 0px 2px;
+        display: block;
+        min-width: 300px;
+        width:100%;
+        height: 20px;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+        word-break:keep-all;
+    }
+    .LecturerTabPageImg{
+        width: 135px;
+        height: 180px;
+        float:left;
+        clear: left;
+        position: relative;
+    }
+    .LecturerTabPageName{
+        float: left;
+        position: relative;
+        width: 390px;
+    }
+    .LecturerTabPageJob{
+        float: left;
+        position: relative;
+        width: 390px；
+    }
+    .LecturerTabPageSummary{
+        float: left;
+        position: relative;
+        width: 390px;
+        height: 120px;
+    }
+    .LecturerTabPageBtnGroup{
+        float: right;
+        position: relative;
+    }
+    #DocFrame{
+        width:100%;
+        height:100%;
+        border:1px dashed #BEBEBE;
+    }
+    .nav-tabs li.active a,.nav-tabs li.active a:hover,.nav-tabs li.active a:visited,.nav-tabs li.active a:focus {
+        border: 0 none;
+        background:rgba(66, 139, 202, 1);
+        color:white;
+        }
+    .splitLine{
+    width: 100%;
+    text-align: center;
+    clear:both;
+    position: relative;
+    }
+    #LecturerSendRes{
+        color: darkred
+    }
+    #CourseAbstractBox textarea{
+        max-width:380px;
+        width:380px;
+        height:140px;
+    }
+    .LecturerName{
+        border: 1px solid #BEBEBE;
+    }
+    .LecturerJob{
+        border: 1px solid #BEBEBE;
+    }
+</style>
+
+<script type="text/javascript">
+     var JsonStr = {{ temvarJsonData|safe }};
+     var AbstractData = {{ temvarJsonAbstractData|safe }};
+     var LecturerData = {{ temvarJsonLecturerData|safe }};
+     var ThisLecturerData = {{ temvarThisLecturerData|safe }};
+     var CourseId="{{ temvarCourseId|safe }}";
+      /*var LecturerData = [
+         { "id": "1", "name": "张国玉", "job": "国家行政学院政治学教研部副教授","ImgSrc":"/static/app/z01.png", "summary": "XXXXXXXXXXXXXXXXXXX" }
+        ,{ "id": "2", "name": "张国玉", "job": "清华大学廉政与治理研究中心副主任","ImgSrc":"/static/app/z02.jpg", "summary": "NNNNNNNNNNNNNNNNNNNNNNN" }
+        ,{ "id": "3", "name": "张国玉", "job": "中央党校党建部教授", "ImgSrc":"/static/app/z03.jpg","summary": "YYYYYYYYYYYYYYYYYYYYYYYYYYYY" }
+    ]; */
+</script>
+<script type="text/javascript">
+    /*bootstrapTable OP*/
+    /* $(function () {
+        $("#LecturerTable").bootstrapTable({
+            data: LecturerData,
+            onClickRow: function (row) {
+                //alert(row.id);
+                $("#LecturerTable").hide();
+                $("#LecturerInfoBox").show();
+                $("#LecturerNameInput").val(LecturerData[row.id].name);
+                $("#LecturerJobInput").val(LecturerData[row.id].job);
+                $("#LecturerSummaryText").val(LecturerData[row.id].summary);
+            }
+        });
+    });
+    function queryParams() {
+        return {
+
+        };
+    } */
+    /*bootstrapTable ED*/
+    /*全局var OP*/
+    var CurrentFocusItem = "";
+    var CurrentSubItemIndex = "";
+    var SubTitleCount = 0;
+    var CurrentSlidePage = 1;
+    var SlidePageCount = 0;
+    var CurrentTitleLevel = 1;
+    var CurrentLecturerId = "";
+    var CurrentFocusTitle="";//记录标题导航ID
+    var SubEndTime;
+    var IframeUrl = "{{ temvarDocPath }}";
+    /*全局var ED*/
+    /*载入执行 OP*/
+    $(document).ready(function () {
+        //局部var
+        //var ThisJsonStr =JSON.parse(JsonStr);
+        //var ThisJsonStr = eval('(' + JsonStr + ')');
+        var ThisJsonStr = JsonStr;
+        var LeftDefauleWidth = $("#LeftPanel").width() - 16;
+        var RightDefauleWidth = $("#RightPanel").width() - 16;
+        $("#DownloadSlide").attr("href","{{tempvarSlideDownload}}");
+        $("#DownloadCurrentSlide").attr("href","{{tempvarCurrentSlideDownload}}");
+        $("#TestFileDownload").attr("href","{{tempvarTestDownload}}");
+        $("#DownloadAudio").attr("href","{{temvarAudioFilePath}}");
+        /*To Do OP*/
+        $("#LeftPanel").resizable();
+        $("#RightPanel").resizable();
+        $("#LeftPanel").width(LeftDefauleWidth);
+        $("#LeftPanel").height(700);
+        $("#RightPanel").width(RightDefauleWidth);
+        $("#RightPanel").width(750);
+        //$("#PlayerPanel").hide();
+        $("#SlideAddBtn").hide();
+        $("#LeftPanel").width(parseInt((LeftDefauleWidth + RightDefauleWidth) * (1 / 3)));
+        $("#RightPanel").width(parseInt((LeftDefauleWidth + RightDefauleWidth) * (2 / 3)));
+        /*Tabs OP*/
+        if (ThisLecturerData.length==1)
+        {
+            $("#LecturerTabBox").hide();
+            $("#LecturerInfoBox").show();
+            $("#LecturerUpdateBtn").show();
+            $("#LecturerReSelectBtn").show();
+            $("#LecturerPic").attr("src",ThisLecturerData[0].ImgSrc);
+            $("#LecturerNameInput").text(ThisLecturerData[0].name);
+            $("#LecturerJobInput").text(ThisLecturerData[0].job);
+            $("#LecturerSummaryText").text(ThisLecturerData[0].summary);
+            CurrentLecturerId=ThisLecturerData[0].id;
+        }
+        if(LecturerData.length>=1){
+            for(var o in LecturerData)
+            {
+            var LecturerTabPageId= "LecturerTabPage"+LecturerData[o].id;
+            $("#LecturerTab").append("<li><a href='#"+LecturerTabPageId+"' data-toggle='tab'>"+ LecturerData[o].id +"</a></li>");
+            $("#LecturerTabContent").append("<div class='tab-pane fade in active' id='"+LecturerTabPageId+"'></div>");
+            $("#"+LecturerTabPageId).append("<img class='LecturerTabPageImg' src='"+LecturerData[o].ImgSrc +"'/>");
+            $("#"+LecturerTabPageId).append("<div class='LecturerTabPageName'>"+LecturerData[o].name+"</div>");
+            $("#"+LecturerTabPageId).append("<div class='LecturerTabPageJob'>"+LecturerData[o].job+"</div>");
+            $("#"+LecturerTabPageId).append("<textarea class='LecturerTabPageSummary'>"+LecturerData[o].summary+"</textarea>");
+            $("#"+LecturerTabPageId).append("<div class='btn-group btn-group-md LecturerTabPageBtnGroup'></div>");
+            $("#"+LecturerTabPageId).children(".btn-group").append("<button type='button' class='btn btn-primary' onclick='$.SelectLecturerInfo("+(LecturerData[o].index)+")'>选中</button>");
+            $("#"+LecturerTabPageId).children(".btn-group").append("<button type='button' class='btn btn-primary' onclick='$.AddLecturer()')'>新建</button>");
+            }  
+        }
+        if(LecturerData.length==0&&ThisLecturerData.length==0){
+            $("#LecturerTabBox").hide();
+            $("#LecturerInfoBox").show();
+            $("#LecturerUpdateBtn").show();
+            $("#LecturerReSelectBtn").hide();
+        }
+        $(function () {
+            $('#PlayerTab li:eq(1) a').tab('show');
+            $('#LecturerTab li:eq(0) a').tab('show');
+        });
+        /*Tabs ED*/
+        $.LoadJsonData("FullTextPanel", ThisJsonStr);
+        /*Summary OP*/
+        if(AbstractData.length>0)
+        {
+            $.each(AbstractData, function(i, item)    
+            {
+                //:eq(i) [i] 均无效
+                $("#CourseAbstractbox textarea").eq(i).text(item["text"]);
+            });
+        }
+        /*Summary ED*/
+        /*To Do ED*/
+        /*按钮事件 OP*/  //$("span[id^='SubItem']").click(function (){ });//id属性以yyy开始的所有xxx标签
+        $("#SlideBtn").click(function () {
+            $("#PlayerPanel").hide();
+            $("#SlidePanel").show();
+            $("#TestPanel").hide();
+            $("#InfoPanel").hide();
+            $("#LeftPanel").width(LeftDefauleWidth);
+            $("#RightPanel").width(RightDefauleWidth);
+            //
+            $("button:contains(S)").show();
+            $("#SlideAddBtn").show();
+            //console.log("iFRsrc:"+$("#DocFrame").attr("src"));
+            //console.log("iFRurl:"+IframeUrl.replace("&amp;", "&"));
+            if ($("#DocFrame").attr("src")=="")
+            {
+                $("#DocFrame").attr("src", IframeUrl.replace("&amp;", "&"));
+            }
+            //
+            var WaitObject = $("#PptEditingStatusBar\\.SlideInformation-Medium14 span:eq(0)", document.frames['DocFrame'].document).html();
+            $("#PptEditingStatusBar\\.SlideInformation-Medium14 span:eq(0)", document.frames['DocFrame'].document).waitStatusBar(WaitObject, function () {
+                SlidePageCount = $.GetSlidePageCount();
+                //chindren(),find()不支持bind(),html()
+                var thisStatusBar = $("#PptEditingStatusBar\\.SlideInformation-Medium14 span:eq(0)", document.frames['DocFrame'].document);
+                thisStatusBar.bind('DOMNodeInserted', function (e) {
+                    //alert(thisStatusBar.html());               
+                    //alert($.GetSlidePage()+"/"+SlidePageCount+"//"+$.GetSlidePageCount());
+                    //
+                    var tempCurrentSlidePage = $.GetSlidePage();
+                    if (tempCurrentSlidePage != CurrentSlidePage) {
+                        CurrentSlidePage = tempCurrentSlidePage;
+                        if ($("[PPTPagination=" + CurrentSlidePage + "]").html() != null && $("[PPTPagination=" + CurrentSlidePage + "]").html() != undefined) {
+                            //alert(("#FullTextPanel").scrollTop);
+                            //alert($("[PPTPagination=" + CurrentSlidePage + "]").offset().top);
+                            //alert($("#FullTextPanel").scrollTop());
+                            //$("#FullTextPanel").scrollTop($("[PPTPagination=" + CurrentSlidePage + "]").offset().top);
+                            if ($(".SentenceCurrentSkip").html() != null && $(".SentenceCurrentSkip").html() != undefined) {
+                                $(".SentenceCurrentSkip").attr("class", "SentenceDefault");
+                            }
+                            else { }
+                            $("[PPTPagination=" + CurrentSlidePage + "]").attr("class", "SentenceCurrentSkip");
+                        }
+                        else { }
+                    }
+                    else { }
+                    var tempSlidePageCount = $.GetSlidePageCount();
+                    if (tempSlidePageCount != SlidePageCount) {
+                        if (SlidePageCount == 0) {
+                            SlidePageCount = tempSlidePageCount;
+                        }
+                        else if (tempSlidePageCount - SlidePageCount == 1) {
+                            var NewPaginationNum = $.GetSlidePage() + 1;
+                            var PPTIdList = new Array();
+                            for (var i = NewPaginationNum; i <= tempSlidePageCount; i++) {
+                                if ($("[PPTPagination=" + i + "]").html() != null && $("[PPTPagination=" + i + "]").html() != undefined) {
+                                    PPTIdList.push($("[PPTPagination=" + i + "]").attr("id"));
+                                }
+                            }
+                            for (var j = 0; j < PPTIdList.length; j++) {
+                                var tempNewPagination = parseInt($("[id=" + PPTIdList[j] + "]").attr("PPTPagination")) + 1;
+                                $("[id=" + PPTIdList[j] + "]").attr("PPTPagination", tempNewPagination);
+                                $("[id=" + PPTIdList[j] + "]").children("button").text("S" + tempNewPagination + "-");
+                            }
+                            SlidePageCount = tempSlidePageCount;
+                        }
+                        else if (tempSlidePageCount - SlidePageCount == -1) {
+                            if ($("[PPTPagination=" + $.GetSlidePage() + "]").html() != null && $("[PPTPagination=" + $.GetSlidePage() + "]").html() != undefined) {
+                                //del 
+                                $("[PPTPagination=" + $.GetSlidePage() + "]").children("button").remove();
+                                //alert($("[PPTPagination=" + $.GetSlidePage() + "]").children("button").text());
+                                $("[PPTPagination=" + $.GetSlidePage() + "]").attr("PPTPagination", 0);
+
+                                $("[PPTPagination=" + $.GetSlidePage() + "]").children("button").remove();
+                            }
+                            var PPTIdList = new Array();
+                            for (var i = $.GetSlidePage() + 1; i <= tempSlidePageCount; i++) {
+                                if ($("[PPTPagination=" + i + "]").html() != null && $("[PPTPagination=" + i + "]").html() != undefined) {
+                                    PPTIdList.push($("[PPTPagination=" + i + "]").attr("id"));
+                                }
+                            }
+                            for (var j = 0; j < PPTIdList.length; j++) {
+                                var NewPagination = parseInt($("[id=" + PPTIdList[j] + "]").attr("PPTPagination")) - 1;
+                                $("[id=" + PPTIdList[j] + "]").attr("PPTPagination", NewPagination);
+                                $("[id=" + PPTIdList[j] + "]").children("button").text("S" + NewPagination + "-");
+                            }
+                            SlidePageCount = tempSlidePageCount;
+                        }
+                        else { }
+                    }
+                    else { }
+                });
+            });
+        });
+        $("#PlayerBtn").click(function () {
+            $("#PlayerPanel").show();
+            $("#SlidePanel").hide();
+            $("#TestPanel").hide();
+            $("#InfoPanel").hide();
+            $("#LeftPanel").width(parseInt((LeftDefauleWidth + RightDefauleWidth) * (1 / 3)));
+            $("#RightPanel").width(parseInt((LeftDefauleWidth + RightDefauleWidth) * (2 / 3)));
+            //
+            $("button:contains(S-)").hide();
+            $("#SlideAddBtn").hide();
+            //
+            $(function () {
+                $('#PlayerTab li:eq(1) a').tab('show');
+            });
+        });
+        $("#InfoBtn").click(function () {
+            $("#InfoPanel").show();
+            $("#SlidePanel").hide();
+            $("#TestPanel").hide();
+            $("#PlayerPanel").hide();
+            $("#LeftPanel").width(parseInt((LeftDefauleWidth + RightDefauleWidth) * (1 / 3)));
+            $("#RightPanel").width(parseInt((LeftDefauleWidth + RightDefauleWidth) * (2 / 3)));
+            //
+            $("button:contains(S-)").hide();
+            $("#SlideAddBtn").hide();
+        });
+        $("#TestBtn").click(function () {
+            $("#TestPanel").show();
+            $("#SlidePanel").hide();
+            $("#InfoPanel").hide();
+            $("#PlayerPanel").hide();
+            $("#LeftPanel").width(parseInt((LeftDefauleWidth + RightDefauleWidth) * (1 / 3)));
+            $("#RightPanel").width(parseInt((LeftDefauleWidth + RightDefauleWidth) * (2 / 3)));
+            //
+            $("button:contains(S-)").hide();
+            $("#SlideAddBtn").hide();
+        });
+        $("#ParagraphAddBtn").click(function () {
+            $.ParaGraphAdd(CurrentFocusItem);
+        });
+        $("#TitleAddBtn").click(function () {
+            //console.log($("#TitleItem"+CurrentTitleLevel+"_" + CurrentFocusItem).attr("id"));
+            if (CurrentFocusItem.indexOf("SubItem") == 0 &&  !$("#TitleItem"+CurrentTitleLevel+"_" + CurrentFocusItem).attr("id")) {
+                //Para++
+                if($("#"+CurrentFocusItem).attr("IsBeginningOfParagraph")=="true")
+                { }
+                else{ $.ParaGraphAdd(CurrentFocusItem); }
+                //PreTitleItemId
+                /* var PreTitleItemId = "";
+                $("#FullTextPanel").children().each(function () {
+                    if ($(this).attr("id") == CurrentFocusItem) {
+                        CurrentSubItemIndex = $(this).index();
+                        return false;
+                    }
+                    else { }
+                });
+                for (i = CurrentSubItemIndex - 1; i >= 0; i--) {
+                    if ($("#FullTextPanel").children().eq(i).attr("id").indexOf("TitleItem") == 0) {
+                        PreTitleItemId = $("#FullTextPanel").children().eq(i).attr("id");
+                        break;
+                    }
+                    else { }
+                }
+                SubTitleCount += 1; */
+                $.SubTitleAdd(CurrentFocusItem,CurrentTitleLevel);
+                //SubTitleNavi
+                $.LoadTitleNavi();
+                /* var ThisLi = "<li id='TitleLi_" + SubTitleCount + "'></li>";
+                if (PreTitleItemId == "") {
+                    $("#SubTitlePanel").prepend(ThisLi);
+                    $("#TitleLi_" + SubTitleCount).attr("class", "SubTitleLi");
+                    //
+                    $.RegisterSubTitleClick(SubTitleCount);
+                }
+                else {
+                    $("#TitleLi_" + PreTitleItemId.split("_")[1]).after(ThisLi);
+                    $("#TitleLi_" + SubTitleCount).attr("class", "SubTitleLi");
+                    //
+                    $.RegisterSubTitleClick(SubTitleCount);
+                } */
+            }
+            else { alert("只能在句子上加标题 / 同级标题只能有一个 "); }
+        });
+        $("#SlideAddBtn").click(function () {
+            if (CurrentFocusItem.indexOf("SubItem") == 0) {
+                if ($("[PPTPagination=" + $.GetSlidePage() + "]").html() != null && $("[PPTPagination=" + $.GetSlidePage() + "]").html() != undefined) {
+                    alert("这张幻灯片已经用过了");
+                }
+                else {
+                    $("#" + CurrentFocusItem).attr("PPTPagination", $.GetSlidePage());
+                    //
+                    //$("#" + CurrentFocusItem).after("<span id='ItemEditBox_"+CurrentFocusItem+"'></span>");
+                    //$("#" + CurrentFocusItem).appendTo($("#ItemEditBox_" + CurrentFocusItem));
+                    //
+                    $("#" + CurrentFocusItem).append("<button></button>");
+                    $("#" + CurrentFocusItem).children("button").attr("type", "button");
+                    $("#" + CurrentFocusItem).children("button").attr("class", "btn btn-primary btn-xs SlideDelBtn");
+                    //$("#" + CurrentFocusItem).children("button").attr("class", "btn btn-primary btn-xs SlideDelBtn");
+                    //$("#" + CurrentFocusItem).children("button").attr("contentEditable", "false");
+                    $("#" + CurrentFocusItem).children("button").text("S" + $.GetSlidePage() + "-");
+                    $("#" + CurrentFocusItem).children("button").mousedown(function (event) {
+                        event.stopPropagation();
+                    });
+                    //修改此处需对应修改LoadData方法
+                    $("#" + CurrentFocusItem).children("button").click(function () {
+                        $("#" + CurrentFocusItem).children("button").remove();
+                        $("#" + CurrentFocusItem).attr("PPTPagination", 0);
+                        $("#" + CurrentFocusItem).unbind("mousedown");
+                        if( $("#" + CurrentFocusItem).attr("IsBeginningOfParagraph")=="episode")
+                        {
+                            $("#" + CurrentFocusItem).attr("IsBeginningOfParagraph", "false");
+                            $("#SplitLine_" + CurrentFocusItem).remove();
+                            $("#abs_" + CurrentFocusItem).remove();
+                            $("#ParagraphDelBtn_"+CurrentFocusItem).remove();
+                        }
+                    });
+                    //
+                    $("#" + CurrentFocusItem).mousedown(function () {
+                        alert("已选中，编辑需先取消幻灯片关联");
+                    });
+                }
+            }
+            else {
+                alert("先选中句子再试试");
+            }
+        });
+        $("#EpisodeAddBtn").click(function () {
+            $.EpisodeAdd(CurrentFocusItem);
+        });
+        $("#ViewToggleBtn").click(function () {
+            $("#FullTextPanel").children("span").removeAttr("contentEditable");
+            $("#FullTextPanel").children("span").attr("style", "border:0");
+            $("#FullTextPanel").children("button").hide();
+        });
+        $("#EditToggleBtn").click(function () {
+            $.LoadJsonData("FullTextPanel", ThisJsonStr);
+        });
+        /*按钮事件 ED*/
+        /*播放器事件 OP*/
+        MiddleTime = Number(SubEndTime)/2;
+        var vid = document.getElementById("AudioPlayer");
+        // 为 <video> 添加 seeked 事件, 在寻址操作完成后执行函数
+        vid.addEventListener("seeked", MediaSeeked);
+        function MediaSeeked() {
+            var CurrentTime=vid.currentTime*1000;
+            var SubList=$("span[id^='SubItem_']");
+            //console.debug(SubList[10].getAttribute("StartTime"));
+            //console.debug(CurrentTime+'/'+MiddleTime+'/'+SubEndTime);
+            var MatchingItem;
+            if(CurrentTime>MiddleTime)
+            {
+                for(i=0;i<SubList.length;i++)
+                {
+                    if (Number(SubList[i].getAttribute("StartTime"))>=CurrentTime)
+                    {
+                        //console.debug(i);
+                        MatchingItem=i;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for(i=SubList.length-1;i>=0;i--)
+                {
+                    if (Number(SubList[i].getAttribute("StartTime"))<=CurrentTime)
+                    {
+                        //console.debug(SubList[462]);
+                        MatchingItem=i;
+                        break;
+                    }
+                }
+            }
+            $("span[id^='SubItem_']").attr("class", "SentenceDefault");
+            $("#" + SubList[MatchingItem].getAttribute("id")).attr("class", "SentenceCurrent")
+            $("#FullTextPanel").animate({ scrollTop: $("#FullTextPanel").scrollTop() + $("#" + SubList[MatchingItem].getAttribute("id")).offset().top - $("#FullTextPanel").offset().top }, 1000);            
+        }
+        /*播放器事件 ED*/
+    });
+    //AutoSave
+    setInterval("$.SaveJsonData('auto')",300000);
+    /*载入执行 ED*/
+    /*Method OP*/
+    $.LoadJsonData = function (container, JsonStr)
+    {
+        var JsonData = JsonStr;
+        //var JsonData = JSON.parse(JsonStr);
+        $.each(JsonData, function (i, item) {
+            if (JsonData[i].type == 'SubItem') {
+                //var ThisInput = "<input id='SubItem_" + JsonData[i].index + "'></input>";
+                //$("#" + container).append(ThisInput);
+                //$("#SubItem_" + JsonData[i].index).attr("type","text");
+                //$("#SubItem_" + JsonData[i].index).attr("class","form-control");
+                //$("#SubItem_" + JsonData[i].index).attr("value", JsonData[i].content);
+                //
+                var ThisSpan = "<span id='SubItem_" + JsonData[i].index + "'></span>";
+                $("#" + container).append(ThisSpan);
+                $("#SubItem_" + JsonData[i].index).text(JsonData[i].content);
+                $("#SubItem_" + JsonData[i].index).attr("contentEditable", "true");
+                $("#SubItem_" + JsonData[i].index).attr("StartTime", JsonData[i].start);
+                $("#SubItem_" + JsonData[i].index).attr("EndTime", JsonData[i].end);
+                $("#SubItem_" + JsonData[i].index).attr("PPTOutline", JsonData[i].PPTOutline);
+                $("#SubItem_" + JsonData[i].index).attr("PPTPagination", JsonData[i].PPTPagination);
+                $("#SubItem_" + JsonData[i].index).attr("index", JsonData[i].index);
+                $("#SubItem_" + JsonData[i].index).attr("IsBeginningOfParagraph", JsonData[i].IsBeginningOfParagraph);
+                SubEndTime=JsonData[i].end;
+                //First or Para or Episode
+                if (i == 0 || $("#SubItem_" + JsonData[i].index).attr("IsBeginningOfParagraph") == "true") {
+                    //console.log(JsonData[i].index);
+                    /* 
+                    $("#SubItem_" + JsonData[i].index).before("<button id='ParagraphDelBtn_SubItem_" + JsonData[i].index + "'></button>");
+                    $("#ParagraphDelBtn_SubItem_" + JsonData[i].index).text("P-");
+                    $("#ParagraphDelBtn_SubItem_" + JsonData[i].index).attr("class", "btn btn-primary btn-xs BtnBeginningOfParagraph");
+                    $("#ParagraphDelBtn_SubItem_" + JsonData[i].index).click(function () {
+                        //$("#" + CurrentFocusItem).attr("class", "SentenceCurrent");
+                        $("#SubItem_" + JsonData[i].index).attr("IsBeginningOfParagraph", "false");
+                        $(this).remove();
+                    });
+                    $("#SubItem_" + JsonData[i].index).attr("class", "SentenceDefault");
+                    */
+                    $.ParaGraphAdd("SubItem_" + JsonData[i].index,"force");
+                    $("#SubItem_" + JsonData[i].index).attr("class", "SentenceDefault");
+                }
+                else if($("#SubItem_" + JsonData[i].index).attr("IsBeginningOfParagraph") == "episode"){
+                    $.EpisodeAdd("SubItem_" + JsonData[i].index,"force"); 
+                    $("#SubItem_" + JsonData[i].index).attr("class", "SentenceDefault");
+                }
+                else {
+                    $("#SubItem_" + JsonData[i].index).attr("class", "SentenceDefault");
+                    //$("#SubItem_" + JsonData[i].index).attr("IsBeginningOfParagraph",JsonData[i].IsBeginningOfParagraph);
+                }
+                //Slide 
+                if ($("#SubItem_" + JsonData[i].index).attr("PPTPagination") != 0) {
+                    //console.log(JsonData[i].index);
+                    $("#SubItem_" + JsonData[i].index).append("<button></button>");
+                    $("#SubItem_" + JsonData[i].index).children("button").attr("type", "button");
+                    $("#SubItem_" + JsonData[i].index).children("button").attr("class", "btn btn-primary btn-xs SlideDelBtn");
+                    $("#SubItem_" + JsonData[i].index).children("button").text("S" + $("#SubItem_" + JsonData[i].index).attr("PPTPagination") + "-");
+                    $("#SubItem_" + JsonData[i].index).children("button").hide();
+                    $("#SubItem_" + JsonData[i].index).children("button").mousedown(function (event) {
+                        event.stopPropagation();
+                    });
+                    //修改此处需对应修改SlideAdd按钮事件 
+                    $("#SubItem_" + JsonData[i].index).children("button").click(function () {
+                        $("#SubItem_" + JsonData[i].index).children("button").remove();
+                        $("#SubItem_" + JsonData[i].index).attr("PPTPagination", 0);
+                        $("#SubItem_" + JsonData[i].index).unbind("mousedown");
+                        if( $("#SubItem_" + JsonData[i].index).attr("IsBeginningOfParagraph")=="episode")
+                        {
+                            $("#SubItem_" + JsonData[i].index).attr("IsBeginningOfParagraph", "false");
+                            $("#SplitLine_SubItem_" + JsonData[i].index).remove();
+                            $("#abs_SubItem_" + JsonData[i].index).remove();
+                            $("#ParagraphDelBtn_SubItem_"+JsonData[i].index).remove();
+                        }
+                    });
+                    //
+                    $("#SubItem_" + JsonData[i].index).mousedown(function () {
+                        alert("已选中，编辑需先取消幻灯片关联");
+                    });
+                }
+                else { }
+                //Sub Event
+                $("#SubItem_" + JsonData[i].index).focus(function () {
+                    CurrentFocusItem = "SubItem_" + JsonData[i].index;
+                    if ($("#" + CurrentFocusItem).attr("IsBeginningOfParagraph") == "true") {
+                        //$("#SubItem_" + JsonData[i].index).attr("class", "SentenceBeginningOfParagraphCurrent");
+                        $("#SubItem_" + JsonData[i].index).attr("class", "SentenceCurrent");
+                    }
+                    else {
+                        $("#SubItem_" + JsonData[i].index).attr("class", "SentenceCurrent");
+                    }
+                    if ($("#" + CurrentFocusItem).attr("PPTPagination") == 0) { }
+                    else {
+                        var SlideId = parseInt($("#" + CurrentFocusItem).attr("PPTPagination")) - 1;
+                        $(".ThumbnailContainer:eq(" + SlideId + ")", document.frames['DocFrame'].document).trigger('click');
+                    }
+                    //Media Seek
+                    var vid = document.getElementById("AudioPlayer");
+                    vid.currentTime = (Number(JsonData[i].start/1000)).toFixed(2);
+                });
+                $("#SubItem_" + JsonData[i].index).blur(function () {
+                    if ($("#" + CurrentFocusItem).attr("IsBeginningOfParagraph") == "true") {
+                        //$("#SubItem_" + JsonData[i].index).attr("class", "SentenceBeginningOfParagraphDefault");
+                        $("#SubItem_" + JsonData[i].index).attr("class", "SentenceDefault");
+                    }
+                    else {
+                        $("#SubItem_" + JsonData[i].index).attr("class", "SentenceDefault");
+                    }
+                });
+            }
+            
+        });
+        $.each(JsonData, function (i, item) {
+                //Subtitle
+                if ((JsonData[i].type).indexOf("TitleItem") == 0) {
+                    var CurrentSubId = "";
+                    for (var j = i; j <= JsonData.length; j++) {
+                        if (JsonData[j].type == "SubItem") {
+                            CurrentSubId = "SubItem_" + JsonData[j].index;
+                            break;
+                        }
+                        else { }
+                    }
+                    var CurrentTitleLevel = JsonData[i].type.replace("TitleItem", "");
+                    $.SubTitleAdd(CurrentSubId, CurrentTitleLevel);
+                    $("#TitleTextItem"+CurrentTitleLevel+"_" + CurrentSubId).text(JsonData[i].content);
+                }
+                else { }
+            });
+        $.LoadTitleNavi();
+    };
+    $.SaveJsonData = function (mode) {
+        var JsonData = [];
+        var ItemCount = 1;
+        var TitleCount = 1;
+        $("#FullTextPanel").find("span").each(function () {
+            var ThisItem = {};
+            if ($(this).attr("id").indexOf("SubItem") == 0) {
+                ThisItem.index = ItemCount.toString();
+                ThisItem.type = "SubItem";
+                ThisItem.PPTOutline = "";
+                if ($(this).attr("PPTPagination") != 0) 
+                {
+                    var StrArr = $(this).html().split("<button");
+                    //console.log(StrArr[0]);
+                    ThisItem.content = StrArr[0];
+                    //console.log(ThisItem.content);
+                }
+                else { ThisItem.content = $(this).text(); }
+                ThisItem.IsBeginningOfParagraph = $(this).attr("IsBeginningOfParagraph");
+                ThisItem.PPTPagination = $(this).attr("PPTPagination");
+                ThisItem.start = $(this).attr("StartTime");
+                ThisItem.end = $(this).attr("EndTime");
+                //
+                ItemCount++;
+            }
+            else if ($(this).attr("id").indexOf("TitleTextItem") == 0) {
+                ThisItem.index = TitleCount.toString();
+                ThisItem.type = $(this).parent(".SubTitleBox").attr("id").split("_")[0];
+                ThisItem.content = $(this).text();
+                TitleCount++;
+            }
+            else { }
+            JsonData.push(ThisItem);
+        });
+        //console.log(JSON.stringify(JsonData));
+        var csrftoken = $.cookie('csrftoken');
+        $.ajax({
+            type: 'POST',
+            url: "/JsonDataSave/?mode="+mode+"&id="+CourseId,
+            data: JSON.stringify(JsonData),
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            },
+            success: function (data) {
+                if (mode != 'auto')
+                {
+                    alert("已保存");
+                }
+                $("#NoticeBox").show();
+                $("#NoticeBox").text("已保存").hide(5000);
+                //console.log(data.status); 
+            },
+            error: function () {
+                alert('出现错误');
+                $("#NoticeBox").show();
+                $("#NoticeBox").text("出现错误").hide(5000);
+            },                
+            dataType: "text"
+        });
+    };
+    $.RestoreJsonData = function () {
+        var JsonData = [];
+        var csrftoken = $.cookie('csrftoken');
+        $.ajax({
+            type: 'POST',
+            url: "/JsonDataRestore/",
+            data: JSON.stringify(JsonData),
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            },
+            success: function (data) {
+                $("#NoticeBox").show();
+                $("#NoticeBox").text("已还原为上次保存状态").hide(5000);
+                //alert("已保存"); // 
+                //console.log(data.status); // 
+            },
+            dataType: "text"
+        });
+        //
+         
+        $.LoadJsonData("FullTextPanel", ThisJsonStr);
+    };
+    $.UpdateCourseAbstract = function () {
+        var csrftoken = $.cookie('csrftoken');
+        var JsonData = {"id": CourseId,"AbstractText":[]};
+        var i=1;
+        $("#CourseAbstractbox textarea").each(function()
+        {
+            JsonData["AbstractText"].push({"index":i,"text": $(this).text().replace(/\r\n/g,'').replace(/\n/g,'')});
+            i++;
+        });
+        $.ajax({
+            type: 'POST',
+            url: "/UpdateCourseAbstract/",
+            data: JSON.stringify( JsonData),
+            dataType: "json",
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            },
+            success: function (data) {
+                if(data["res"]=="success")
+                {
+                    $("#SaveAbstractDataState").show();
+                    $("#SaveAbstractDataState").text("保存成功！").hide(5000);
+                }
+                //alert("已保存"); // 
+                //console.log(data.status); // 
+            }
+        });
+    };
+        $.EditInfo = function () {
+            var csrftoken = $.cookie('csrftoken');
+            $("#SlideBtn").click();
+            //console.log(SlidePageCount);
+            if (SlidePageCount == "") {
+                $("#NoticeBox").show();
+                $("#NoticeBox").text("幻灯片未加载完成,请稍等再点击按钮").hide(5000);
+            }
+            else {
+                var JsonData = { "id": CourseId, "PageCount": SlidePageCount };
+                $.ajax({
+                    type: 'POST',
+                    url: "/SubCheck/",
+                    data: JSON.stringify(JsonData),
+                    dataType: "json",
+                    beforeSend: function (xhr, settings) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    },
+                    success: function (data) {
+                        if (data["res"] == "pass") {
+                            $("#NoticeBox").show();
+                            $("#NoticeBox").text("基线测试通过，准备跳转").hide(3000);
+                            $(location).attr('href', '/CourseUpload/?ProjectNo=' + $.getUrlParam('ProjectNo'));
+                        }
+                        else {
+                            $("#NoticeBox").show();
+                            $("#NoticeBox").text(data["res"]).hide(5000);
+                        }
+                    }
+                });
+            }
+        };
+    //
+    $.RegisterSlideClick = function () {
+        $("#EditingThumbnailsPanel", document.frames['DocFrame'].document).click(function () {
+            setTimeout(function () {
+                var CurrentSlidePage = $.GetSlidePage();
+                if ($("[PPTPagination=" + CurrentSlidePage + "]").html() != null && $("[PPTPagination=" + CurrentSlidePage + "]").html() != undefined) {
+                    //alert(("#FullTextPanel").scrollTop);
+                    //alert($("[PPTPagination=" + CurrentSlidePage + "]").offset().top);
+                    //alert($("#FullTextPanel").scrollTop());
+                    //$("#FullTextPanel").scrollTop($("[PPTPagination=" + CurrentSlidePage + "]").offset().top);
+                    if ($(".SentenceCurrentSkip").html() != null && $(".SentenceCurrentSkip").html() != undefined) {
+                        $(".SentenceCurrentSkip").attr("class", "SentenceDefault");
+                    }
+                    else { }
+                    $("[PPTPagination=" + CurrentSlidePage + "]").attr("class", "SentenceCurrentSkip");
+                }
+                else { }
+            }, 500);
+        });
+    };
+    $.RegisterSubTitleClick = function (id) {
+        $("#" + id).click(function () {
+            var ThisItemId = $(this).attr("id").replace("TitleLi_","");
+            //alert($("#FullTextPanel").scrollTop() );
+            //alert($("#TitleItem_"+ThisItemId).children("span").offset().top);
+            //alert($("#FullTextPanel").offset().top);
+            $("#FullTextPanel").animate({ scrollTop: $("#FullTextPanel").scrollTop() + $("#" + ThisItemId).children("span").offset().top - $("#FullTextPanel").offset().top }, 1000);
+            //$("#FullTextPanel").scrollTop($("#FullTextPanel").scrollTop() + $("#TitleItem_"+ThisItemId).children("span").offset().top - $("#FullTextPanel").offset().top);  
+            $(".SubTitleBox").children("span").attr("class", "SentenceDefault");
+            $("#" + ThisItemId).children("span").attr("class", "SentenceCurrent");
+        });
+        $("#" + id).blur(function () {
+            $("#" + ThisItemId).children("span").attr("class", "SentenceDefault");
+        });
+    };
+    $.GetSlidePage = function () {
+        var SpanText = $(document.frames['DocFrame'].document).find("#PptEditingStatusBar\\.SlideInformation-Medium14").find("span:first").text();
+        SpanText = SpanText.split('张', 1)[0].substr(1);
+        return parseInt(SpanText);
+    };
+    $.GetSlidePageCount = function () {
+        var SpanText = $(document.frames['DocFrame'].document).find("#PptEditingStatusBar\\.SlideInformation-Medium14").find("span:first").text();
+        if(SpanText==null||SpanText==undefined||SpanText==""){
+            SpanText="";
+            //console.log('1');
+        }
+        else{
+            SpanText = SpanText.split('张')[1].substr(5);
+            //console.log(SpanText+'2');
+        }
+        return parseInt(SpanText);
+    };
+    $.ParaGraphAdd = function (CurrentFocusItem,mode) {
+        //限制同位置重复P+
+        if ((CurrentFocusItem.indexOf("SubItem") == 0 && $("#" + CurrentFocusItem).attr("IsBeginningOfParagraph") == "false")
+        ||mode=="force") 
+        {
+            //$("#" + CurrentFocusItem).attr("class", "SentenceBeginningOfParagraphCurrent");         
+            $("#" + CurrentFocusItem).before("<button id='ParagraphDelBtn_" + CurrentFocusItem + "'></button>");
+            $("#ParagraphDelBtn_" + CurrentFocusItem).text("P-");
+            $("#ParagraphDelBtn_" + CurrentFocusItem).attr("class", "btn btn-primary btn-xs BtnBeginningOfParagraph");
+            $("#ParagraphDelBtn_" + CurrentFocusItem).click(function () {
+                //$("#" + CurrentFocusItem).attr("class", "SentenceCurrent");
+                $("#" + CurrentFocusItem).attr("IsBeginningOfParagraph", "false");
+                $(this).remove();
+            });
+            if( $("#" + CurrentFocusItem).attr("IsBeginningOfParagraph") != "episode")
+            {
+                $("#" + CurrentFocusItem).attr("IsBeginningOfParagraph", "true");
+            }
+            else
+            { 
+                $("#ParagraphDelBtn_" + CurrentFocusItem).text("P");
+                $("#ParagraphDelBtn_" + CurrentFocusItem).attr("disabled","true");  
+            }  
+        }
+        else { }
+    };
+    $.ParaGraphDel= function (CurrentFocusItem){
+        
+    } 
+    $.EpisodeAdd = function (CurrentFocusItem,mode) 
+    {
+        //E标记必须在幻灯片位置上
+        if($("#" + CurrentFocusItem).attr("PPTPagination")=="0")
+        {
+            alert("分集标记必须在有幻灯片的位置");
+            return false;
+        }
+        //限制同位置重复E+
+        if ((CurrentFocusItem.indexOf("SubItem") == 0 && $("#" + CurrentFocusItem).attr("IsBeginningOfParagraph") != "episode")
+        ||mode=="force") 
+        {
+            //$("#" + CurrentFocusItem).attr("class", "SentenceBeginningOfParagraphCurrent");
+            $("#" + CurrentFocusItem).attr("IsBeginningOfParagraph", "episode");
+            $("#" + CurrentFocusItem).before("<div id='SplitLine_" + CurrentFocusItem + "'><hr/>我是集分割线</div>");
+            $("#SplitLine_" + CurrentFocusItem).attr("class", "SplitLine");
+            $("#SplitLine_" + CurrentFocusItem).append("<button id='EpisodeDelBtn_" + CurrentFocusItem + "'></button><hr/>");
+            $("#CourseAbstractBox").append("<textarea id='abs_" + CurrentFocusItem + "'></textarea>");
+            $("#abs_"+CurrentFocusItem).attr("class","form-control");
+            $("#EpisodeDelBtn_" + CurrentFocusItem).text("E-");
+            $("#EpisodeDelBtn_" + CurrentFocusItem).attr("class", "btn btn-primary btn-xs");
+            $("#EpisodeDelBtn_" + CurrentFocusItem).click(function () 
+            {
+                //$("#" + CurrentFocusItem).attr("class", "SentenceCurrent");
+                $("#" + CurrentFocusItem).attr("IsBeginningOfParagraph", "false");
+                $("#SplitLine_" + CurrentFocusItem).remove();
+                $("#abs_" + CurrentFocusItem).remove();
+                $("#ParagraphDelBtn_"+CurrentFocusItem).remove();
+            });
+            $.ParaGraphAdd(CurrentFocusItem,"force");
+        }
+        else { }
+    };
+    //
+    $.SubTitleAdd = function (CurrentFocusItem,CurrentTitleLevel) {
+            var ThisDiv = "<div id='TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem + "'></div>";
+            //$("#" + CurrentFocusItem).before(ThisDiv);
+            $("#ParagraphDelBtn_" + CurrentFocusItem).before(ThisDiv);
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).attr("class", "SubTitleBox");
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).append("<span></span>");
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).children("span").attr("id", "TitleTextItem" + CurrentTitleLevel + "_" + CurrentFocusItem);
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).children("span").attr("class", "SentenceCurrent");
+            //$("#TitleItem_" + SubTitleCount).children("span").width($("#TitleItem_" + SubTitleCount).width()-120);
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).children("span").width(466);
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).children("span").attr("contentEditable", "true");
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).children("span").focus(function () {
+                CurrentFocusTitle = "TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem;
+                //$(this).attr("class", "SentenceBeginningOfParagraphCurrent");  
+                $(this).attr("class", "SentenceCurrent");
+            });
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).children("span").blur(function () {
+                //$(this).attr("class", "SentenceBeginningOfParagraphDefault");
+                $(this).attr("class", "SentenceDefault");
+                //var TitleId = $(this).parent(".SubTitleBox").attr("id").split("_")[1];
+                console.debug($(this).text()+"/"+CurrentFocusItem);
+                $("#TitleLi_" +  CurrentFocusTitle).children(".SubTitleNaviText").text($(this).text());
+                $("#TitleLi_" +  CurrentFocusTitle).children(".SubTitleNaviText").attr("title",$(this).text())
+            });
+            //DelBtn
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).prepend("<button></button>");
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).children("button").attr("type", "button");
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).children("button").attr("class", "btn btn-primary btn-xs SubTitleDelBtn");
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).children("button").text("T:" + CurrentTitleLevel + "-");
+            $("#TitleItem" + CurrentTitleLevel + "_" + CurrentFocusItem).children("button").click(function () {
+                var TitleId = $(this).parent(".SubTitleBox").attr("id");
+                $.SubTitleDelClick(TitleId);
+            });
+    }
+    //
+    $.SubTitleDelClick = function (SubTitleId) {
+        $("#" + SubTitleId).remove();
+        $("#TitleLi_" + SubTitleId).remove();
+    };
+    //
+    $.TitleLevelToggle = function (level) {
+        CurrentTitleLevel = level;
+        $("#TitleAddBtn").text("标题(T:" + level + ")+");
+    };
+    //
+    $.LoadTitleNavi = function () {
+        $("#SubTitlePanel").empty();
+        $("#FullTextPanel").find("span").each(function () {
+            if($(this).attr("id").indexOf("TitleTextItem") == 0)
+            {
+                var ThisId="TitleLi_"+ $(this).attr("id").replace("TitleTextItem","TitleItem");
+                var ThisLi = "<li id='" + ThisId + "'></li>";
+                $("#SubTitlePanel").append(ThisLi);
+                $("#" + ThisId).attr("class", "SubTitleLi");
+                if($(this).attr("id").indexOf("TitleTextItem1") == 0) { $("#" + ThisId).append("<span class='Branch'></span>"); }
+                else if($(this).attr("id").indexOf("TitleTextItem2") == 0) { $("#" + ThisId).append("<span class='SubTitleNaviBranch'>|</span>"); }
+                else if($(this).attr("id").indexOf("TitleTextItem3") == 0) { $("#" + ThisId).append("<span class='SubTitleNaviBranch'>| |</span>"); }
+                else if($(this).attr("id").indexOf("TitleTextItem4") == 0) { $("#" + ThisId).append("<span class='SubTitleNaviBranch'>| | |</span>"); } 
+                else if($(this).attr("id").indexOf("TitleTextItem5") == 0) { $("#" + ThisId).append("<span class='SubTitleNaviBranch'>| | | |</span>"); }                       
+                else{ }
+                $("#" + ThisId).append("<span class='SubTitleNaviText'></span>")
+                $("#" + ThisId).children(".SubTitleNaviText").text($(this).text());
+                $("#" + ThisId).children(".SubTitleNaviText").attr("title",$(this).text());
+                //
+                $.RegisterSubTitleClick(ThisId);
+            }
+            else { }
+        });
+    };
+    //
+    $.SelectLecturerInfo=function (DataId){
+        $("#LecturerTabBox").hide();
+        $("#LecturerInfoBox").show();
+        $("#LecturerUpdateBtn").show();
+        $("#LecturerReSelectBtn").show();
+        $("#LecturerPic").attr("src",LecturerData[DataId].ImgSrc);
+        $("#LecturerNameInput").text(LecturerData[DataId].name);
+        $("#LecturerJobInput").text(LecturerData[DataId].job);
+        $("#LecturerSummaryText").text(LecturerData[DataId].summary);
+        CurrentLecturerId=LecturerData[DataId].id;
+    };
+    //
+    $.ReSelectLecturer=function (){
+        $("#LecturerTabBox").show();
+        $("#LecturerInfoBox").hide();
+        $("#LecturerUpdateBtn").hide();
+        $("#LecturerReSelectBtn").hide();
+    };
+    $.AddLecturer=function (){
+        CurrentLecturerId='';
+        $("#LecturerTabBox").hide();
+        $("#LecturerInfoBox").show();
+        $("#LecturerUpdateBtn").show();
+        $("#LecturerReSelectBtn").hide();
+        $("#LecturerPic").attr("src",'');
+        $("#LecturerNameInput").text('填姓名');
+        $("#LecturerJobInput").text('填职务');
+        $("#LecturerSummaryText").text('');
+    };
+    $.UpdateLecturer=function (){
+        var form = new FormData(); 
+        form.append("id",CurrentLecturerId);
+        if ($("#LecturerPhotoInput").val() !='')
+        {
+            form.append("LecturerPhotoInput",$("#LecturerPhotoInput")[0].files[0]);
+        }
+        form.append('LecturerNameInput', $("#LecturerNameInput").val());
+        form.append('LecturerJobInput', $("#LecturerJobInput").val());
+        form.append('LecturerSummaryText', $("#LecturerSummaryText").val().replace(/\r\n/g,'').replace(/\n/g,''));
+        //console.debug($("#LecturerSummaryText").val().replace(/\r\n/g, '').replace(/\n/g, ''));
+        form.append('CourseId',CourseId);
+        //Ajax提交
+        var csrftoken = $.cookie('csrftoken');
+        $.ajax({
+            url: "/UpdateLecturer/",//无结尾斜线：You called this URL via POST, but the URL doesn't end in a slash
+            type: "POST",
+            data: form,
+            async: true,         //异步
+            processData: false,  //很重要，告诉jquery不要对form进行处理
+            contentType: false,  //很重要，指定为false才能形成正确的Content-Type
+            //timeout: 3000000, //超时时间：30秒
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            },
+            success: function (result) {
+                r=JSON.parse(result);
+                CurrentLecturerId=r['id']
+                $("#LecturerReSelectBtn").hide();
+                $("#LecturerSendRes").show();
+                $("#LecturerSendRes").text('已保存!').hide(5000);
+                //console.debug("lecturer");
+                $("#LecturerPic").attr("src",r['PicSrc']);
+            }
+        });
+    };
+    $.SaveTestFile=function (){
+        var form = new FormData(); 
+        if ($("#TestFileInput").val() !='')
+        {
+            form.append("ProjectNo",$.getUrlParam('ProjectNo'));
+            form.append("TestFileInput",$("#TestFileInput")[0].files[0]);
+            var csrftoken = $.cookie('csrftoken');
+            $.ajax({
+            url: "/SaveTestFile/",//无结尾斜线：You called this URL via POST, but the URL doesn't end in a slash
+            type: "POST",
+            data: form,
+            async: true,         //异步
+            processData: false,  //很重要，告诉jquery不要对form进行处理
+            contentType: false,  //很重要，指定为false才能形成正确的Content-Type
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            },
+            success: function (result) {
+                $("#TestFileState").show();
+                $("#TestFileState").text('已保存!').hide(5000);
+                $("#TestFileDownload").text('下载考题');
+                r=JSON.parse(result);
+                $("#TestFileDownload").attr('href',r['Src']);
+            }
+            });
+        }
+    };
+    $.SlideUpload=function (){
+        var form = new FormData(); 
+        if ($("#SlideUploadInput").val() !='')
+        {
+            $("#SlideUploadState").text('Uploading...');
+            form.append("ProjectNo",$.getUrlParam('ProjectNo'));
+            form.append("SlideUploadInput",$("#SlideUploadInput")[0].files[0]);
+            var csrftoken = $.cookie('csrftoken');
+            $.ajax({
+            url: "/SlideUpload/",//无结尾斜线：You called this URL via POST, but the URL doesn't end in a slash
+            type: "POST",
+            data: form,
+            async: true,         //异步
+            processData: false,  //很重要，告诉jquery不要对form进行处理
+            contentType: false,  //很重要，指定为false才能形成正确的Content-Type
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            },
+            success: function (result) {
+                $("#DocFrame").attr("src", "");
+                $("#SlideUploadState").show();
+                $("#SlideUploadState").text('已保存!').hide(5000);
+                var data=JSON.parse(result);
+                //console.log(data['Src']);
+                IframeUrl='http://newpms.cei.cn/docs/p/PowerPointFrame.aspx?WOPISrc=http%3A%2F%2Fpmsdocs.cei.cn%3A666%2Fwopi%2Ffiles%2F'+data['Src']+'.pptx%3Fuserid%3Dcc%26username%3Dchenchen&PowerPointView=EditView';
+                //$("#DocFrame").attr("src", IframeUrl);
+                //console.log("src:"+$("#DocFrame").attr("src"));
+                //console.log("url:"+IframeUrl);
+            }
+            });
+        }
+    };
+    //GetQuery
+    (function ($) {
+            $.getUrlParam
+                = function (name) {
+                    var reg
+                        = new RegExp("(^|&)" +
+                            name + "=([^&]*)(&|$)");
+                    var r
+                        = window.location.search.substr(1).match(reg);
+                    if (r != null) return unescape(r[2]); return null;
+                }
+        })(jQuery);
+    //
+    jQuery.fn.waitStatusBar = function (TargetObject, func, times, interval) {
+        var _times = times || 100, //100次
+            _interval = interval || 1000, //20毫秒每次 
+            _self = this,
+            _selector = this.selector, //选择器
+            _iIntervalID; //定时器id
+        //alert($("#PptEditingStatusBar\\.SlideInformation-Medium14 span:eq(0)",document.frames['DocFrame'].document).html());
+        if (TargetObject) { //如果已经获取到了，就直接执行函数
+            //alertalert(_times);
+            func && func.call(this);
+        } else {
+            _iIntervalID = setInterval(function () {
+                if (!_times) { //是0就退出
+                    clearInterval(_iIntervalID);
+                }
+                _times <= 0 || _times--; //如果是正数就 --
+                //alert(_times);
+                _self = $(_selector); //再次选择
+                //alert($("#PptEditingStatusBar\\.SlideInformation-Medium14 span:eq(0)",document.frames['DocFrame'].document).html())
+                if (TargetObject) { //判断是否取到
+                    func && func.call(_self);
+                    clearInterval(_iIntervalID);
+                }
+            }, _interval);
+        }
+        return this;
+    }
+    /*Method ED*/
+</script>
+
+<div class="row">
+    <div id="NoticeBox">
+    </div>
+    <div id="PlayerBox">
+        <audio id="AudioPlayer" src="{{temvarAudioFilePath}}" style="width:100%;" controls="controls" autoplay="autoplay">
+        您的浏览器不支持HTML5
+        </audio>
+    </div>
+    <div id="LeftPanel" class="col-md-8" >
+        <div class="btn-group btn-group-sm">
+            <button id="PlayerBtn" type="button" class="btn btn-primary">文稿</button>
+            <button id="SlideBtn" type="button" class="btn btn-primary">幻灯片</button>
+            <button id="InfoBtn" type="button" class="btn btn-primary">简介</button>
+            <button id="TestBtn" type="button" class="btn btn-primary">资料</button>
+        </div>
+        <div id="PlayerPanel">
+            <!--
+            <video id="VideoPlayer" src="{{temvarVideoFilePath}}" style="width:360px; height:220px" controls="controls" autoplay="autoplay">
+            您的浏览器不支持HTML5
+            </video>
+            -->
+            <ul id="PlayerTab" class="nav nav-tabs">
+                    <li class="active">
+                        <a href="#SubTitleTabPage" data-toggle="tab">副标题</a>
+                    </li>
+            </ul>  
+            <div id="PlayerTabContent" class="tab-content">
+                <div class="tab-pane fade in active" id="SubTitleTabPage">
+                    <ul id="SubTitlePanel" class="unstyled">
+                    </ul>
+                </div> 
+            </div>
+            <!--
+            <ul id="PlayerTab" class="nav nav-tabs">
+                    <li class="active">
+                        <a href="#SubTitleTabPage" data-toggle="tab">消 息</a>
+                    </li>
+            </ul> 
+            <div id="MessageBox" class="tab-content">
+            </div>
+            -->
+        </div>
+        <div id="SlidePanel" style="display:none">
+            <iframe id="DocFrame" src=""></iframe>
+        </div>
+        <div id="InfoPanel" style="display:none">
+            <div class="input-group">
+                <label for="name">讲师信息</label>
+                <!-- <table id="LecturerTable" class="table table-hover" data-query-params="queryParams" data-pagination="false">
+                                    <thead>
+                                        <tr>
+                                            <th data-field="name">姓名</th>
+                                            <th data-field="job">职务</th>
+                                        </tr>
+                                    </thead>
+                                </table> -->
+                <div id="LecturerTabBox">
+                    <ul id="LecturerTab" class="nav nav-tabs">
+                    </ul>
+                    <div id="LecturerTabContent" class="tab-content">
+                    </div>
+                </div>
+                <div id="LecturerInfoBox" style="display:none">
+                    <img id="LecturerPic" class='LecturerTabPageImg' src='' />
+                    <div id="LecturerNameInput" class="LecturerName" contenteditable="true"></div>
+                    <div id="LecturerJobInput" class="LecturerJob" contenteditable="true"></div>
+                    <textarea id="LecturerSummaryText" class="LecturerTabPageSummary"></textarea>
+                    <input class="" type="file" id="LecturerPhotoInput" name="lecturerPhotoInput" accept="image/jpeg"/>
+                    <!--<button class="btn btn-primary btn-sm" type="button" onclick="UploadLecturerPhoto();">上传照片</button>-->
+                </div>
+            </div>
+            <br>
+            <div class="btn-group btn-group-md">
+                <button id="LecturerUpdateBtn" type="button" class="btn btn-primary" style="display:none" onclick="$.UpdateLecturer();">保存</button>
+                <button id="LecturerReSelectBtn" type="button" class="btn btn-primary" style="display:none" onclick="$.ReSelectLecturer()">重选</button>
+                <button id="LecturerAddBtn" type="button" class="btn btn-primary" style="display:none" onclick="$.AddLecturer()">添加</button>
+            </div>
+            <div id="LecturerSendRes"></div>
+            <div id="CourseAbstractBox" class="input-group">
+                <label for="name">课程简介（不分段）</label>
+                <textarea id="CourseAbstractText" class="form-control"></textarea>
+            </div>
+            <br>
+            <div class="btn-group btn-group-md">
+                <button id="" type="button" class="btn btn-primary" onclick="$.UpdateCourseAbstract()">保存</button>
+            </div>
+            <div id="SaveAbstractDataState"></div>
+        </div>
+        <div id="TestPanel" style="display:none"> 
+                <a id="DownloadSlide">下载资料</a>
+                <br/>
+                <a id="TestFileDownload" href="">下载考题</a>
+                <br/>
+                <a id="DownloadAudio" href="">下载音频文件</a>
+                <br/>
+                <a id="DownloadCurrentSlide" href="">下载当前幻灯片</a>
+                <br/>
+                <label class="col-md-6 control-label" for="FileInput">选择幻灯片(只接受pptx文件)：</label>
+                <input class="col-md-6 form-control" type="file" id="SlideUploadInput" name="slideFileSrt" />
+                <br/>
+                <button id="SlideUploadBtn" type="button" class="btn btn-primary" onclick="$.SlideUpload()">上传</button>
+                <br/>
+                <div id="SlideUploadState"></div><a id="TestFileDownload" href=""></a>
+                <br/>
+                <label class="col-md-6 control-label" for="FileInput">选择考题：</label>
+                <input class="col-md-6 form-control" type="file" id="TestFileInput" name="testFileSrt" />
+                <br/>
+                <button id="TestFileSaveBtn" type="button" class="btn btn-primary" onclick="$.SaveTestFile()">上传</button>
+                <br/>
+                <div id="TestFileState"></div>
+               
+        </div>
+    </div>
+    <div id="RightPanel" class="col-md-4">
+        <div class="btn-group btn-group-sm">
+            <button id="ParagraphAddBtn" type="button" class="btn btn-primary">分段(P)+</button>
+            <!--<button id="TitleAddBtn" type="button" class="btn btn-primary">标题(T:1)+</button>-->  
+            <button id="SlideAddBtn" type="button" class="btn btn-primary">幻灯片(S)+</button>
+            <button id="EpisodeAddBtn" type="button" class="btn btn-primary">分集(E)+</button>
+            <div class="btn-group btn-group-sm">
+                <button id="TitleAddBtn" type="button" class="btn btn-primary">标题(T:1)+</button>
+                <button id="TitleToggleBtn" type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" style="padding-top: 11.5px; padding-bottom: 11.5px;">
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li>
+                        <a href="#" onclick="$.TitleLevelToggle(1)">一级</a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="$.TitleLevelToggle(2)">二级</a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="$.TitleLevelToggle(3)">三级</a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="$.TitleLevelToggle(4)">四级</a>
+                    </li>
+                    <li class="divider"></li>
+                    <!--
+                    <li>
+                        <a href="#" onclick="$.TitleLevelToggle(N)">不分级</a>
+                    </li>
+                    -->
+                </ul>
+            </div>
+        </div>
+        <!--<div class="btn-group btn-group-sm" style="margin-left:200px">
+                <button id="ViewToggleBtn" type="button" class="btn btn-primary">预览模式</button>
+                <button id="EditToggleBtn" type="button" class="btn btn-primary">编辑模式</button>
+        </div>
+        <div id="SaveDataState" ></div>-->
+        <div class="btn-group btn-group-sm pull-right">
+                <button id="SaveDataBtn" type="button" class="btn btn-primary" onclick="$.SaveJsonData('savebtn')">保存</button>
+                <button id="" type="button" class="btn btn-primary" onclick="$.RestoreJsonData()">还原文稿</button>
+                <button id="" type="button" class="btn btn-primary" onclick="$.EditInfo()">编辑属性</button>
+        </div>
+        
+        <div id="FullTextPanel" class="clearfix">
+            <!--<form  role="form" class="form-inline">
+            </form>-->
+        </div>
+    </div>
+    <span id="JsonData" class="hidden" >
+        {{ temvarJsonData }}
+     </span>
+</div>
+
+{% endblock %}

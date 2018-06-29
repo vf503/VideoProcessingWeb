@@ -1,0 +1,564 @@
+﻿{% extends "app/LayoutLite.html" %}
+
+{% block head %}
+
+{% load staticfiles %}
+<link rel="stylesheet" type="text/css" href="{% static 'app/zTree/css/demo.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'app/zTree/css/zTreeStyle/zTreeStyle.css' %}" />
+<style type="text/css">
+    .TreeArea{
+        float:right;
+        position:relative;
+    }
+    .TreeBox {
+        float:left;
+        position:relative;
+    }
+    .SelectedCategory
+    {
+        height: 100px;
+        width: 200px;
+        border: 1px solid rgba(204, 204, 204, 1);
+    }
+    .LecturerInfoBox
+    {
+        float:none;
+        position: relative;
+        width: 390px;
+    }
+    .LecturerTabPageImg{
+        width: 135px;
+        height: 180px;
+        float:left;
+        position: relative;
+    }
+    .LecturerTabPageName{
+        float: left;
+        position: relative;
+        width: 390px;
+    }
+    .LecturerTabPageJob{
+        float: left;
+        position: relative;
+        width: 390px；
+    }
+    .LecturerTabPageSummary{
+        float: left;
+        position: relative;
+        width: 390px;
+        height: 120px;
+    }
+    .LecturerTabPageBtnGroup{
+        float: right;
+        position: relative;
+    }
+</style>
+<script src="{% static 'app/zTree/js/jquery.ztree.core.js' %}"></script>
+<script src="{% static 'app/zTree/js/jquery.ztree.excheck.js' %}"></script>
+<script>
+    //
+    var ThisDicStored={{temvarDicIdList|safe}};
+    var ThisTYStored={{temvarTYIdList|safe}};
+    var ThisDZStored={{temvarDZIdList|safe}};
+    var ThisGXStored={{temvarGXIdList|safe}};
+    var settingDic = {
+        async: {
+            enable: true,
+            url: "http://zjspedu.cei.com.cn/dataadapter/common.ashx?method=DicTreeZtree",
+            autoParam: ["id", "name=n", "level=lv"],
+            otherParam: { "method": "DicTreeZtree" },
+            dataFilter: filter
+        },
+        check: {
+            enable: true,
+            chkStyle: "checkbox",
+            chkboxType: { "Y": "", "N": "" }
+        },
+        callback: {
+            onCheck: DicOnCheck,
+            onAsyncSuccess: function() 
+            {
+                var treeObj = $.fn.zTree.getZTreeObj("DicTree");
+                $.each(ThisDicStored, function (index, value) {
+                    $.get("http://zjspedu.cei.com.cn/dataadapter/common.ashx?method=DicTreeNodeZtree&id=" + value, function (data, status) {
+                        var pathList = data.split(";");
+                        $.each(pathList, function (index, value) {
+                            if (value != "") {
+                                var PathNode = treeObj.getNodeByParam("id", value, null);;
+                                if (PathNode) {
+                                    treeObj.expandNode(PathNode, true, false, false);
+                                }
+                            }
+                        });
+                        var node = treeObj.getNodeByParam("id", value, null);
+                        if (node) {
+                            treeObj.checkNode(node, true, false, true);
+                        }
+                    });
+                });
+            }    
+        },
+        data: {
+		key: {
+			title: "id"
+		    }
+	    }
+    };
+    //
+    //data = [{ id: '021', name: 'n1', isParent: true }, { id: '022', name: 'n2', isParent: false }, { id: '023', name: 'n3', isParent: true }, { id: '024', name: 'n4', isParent: false }];
+    //$(document).ready(function () {
+    //    var DicTreeData;
+    //    $.ajax({
+    //        type: 'get',
+    //        dataType: 'text',
+    //        data: '{}',
+    //        async: true,
+    //        url: 'http://zjspedu.cei.com.cn/dataadapter/common.ashx?method=DicTreeZtree&id=1',
+    //        success: function (data) {
+    //            //alert(data);
+    //            DicTreeData = JSON.parse(data);
+    //            //alert(JSON.stringify(DicTreeData));
+    //            $.fn.zTree.init($("#DicTree"), setting, DicTreeData);  
+    //        },
+    //        error: function (XMLHttpRequest, textStatus, errorThrown) {
+    //            alert(XMLHttpRequest.status);
+    //            alert(XMLHttpRequest.readyState);
+    //            alert(textStatus);
+    //        }
+    //    });
+    //});
+    var settingDZ = {
+        async: {
+            enable: true,
+            url: "http://zjspedu.cei.com.cn/dataadapter/common.ashx?method=MainTreeZtree&RootId=8274501d5e094996be8868a0f1fd48fb",
+            autoParam: ["id", "name=n", "level=lv"],
+            otherParam: { "method": "TreeZtree" },
+            dataFilter: filter
+        },
+        check: {
+            enable: true,
+            chkStyle: "checkbox",
+            chkboxType: { "Y": "", "N": "" }
+        },
+        callback: {
+            onCheck: DZOnCheck,
+            onAsyncSuccess: function() 
+            {
+                var treeObj = $.fn.zTree.getZTreeObj("DZTree");
+                $.each(ThisDZStored, function (index, value) {
+                    $.get("http://zjspedu.cei.com.cn/dataadapter/common.ashx?method=MainTreeNodeZtree&id=" + value, function (data, status) {
+                        var pathList = data.split(";");
+                        $.each(pathList, function (index, value) {
+                            if (value != "") {
+                                var PathNode = treeObj.getNodeByParam("id", value, null);
+                                if (PathNode) {
+                                    treeObj.expandNode(PathNode, true, false, false);
+                                }
+                            }
+                        });
+                        var node = treeObj.getNodeByParam("id", value, null);
+                        if (node) {
+                            treeObj.checkNode(node, true, false, true);
+                        }
+                    });
+                });
+            }    
+        },
+        data: {
+		key: {
+			title: "id"
+		    }
+	    }
+    };
+    //
+    var settingTY = {
+        async: {
+            enable: true,
+            url: "http://zjspedu.cei.com.cn/dataadapter/common.ashx?method=MainTreeZtree&RootId=63e9103fd1ac46558d816d4e79004e92",
+            autoParam: ["id", "name=n", "level=lv"],
+            otherParam: { "method": "TreeZtree" },
+            dataFilter: filter
+        },
+        check: {
+            enable: true,
+            chkStyle: "checkbox",
+            chkboxType: { "Y": "", "N": "" }
+        },
+        callback: {
+            onCheck: TYOnCheck,
+            onAsyncSuccess: function() 
+            {
+                var treeObj = $.fn.zTree.getZTreeObj("TYTree");
+                $.each(ThisTYStored, function (index, value) {
+                    $.get("http://zjspedu.cei.com.cn/dataadapter/common.ashx?method=MainTreeNodeZtree&id=" + value, function (data, status) {
+                        var pathList = data.split(";");
+                        $.each(pathList, function (index, value) {
+                            if (value != "") {
+                                var PathNode = treeObj.getNodeByParam("id", value, null);
+                                if (PathNode) {
+                                    treeObj.expandNode(PathNode, true, false, false);
+                                }
+                            }
+                        });
+                        var node = treeObj.getNodeByParam("id", value, null);
+                        if (node) {
+                            treeObj.checkNode(node, true, false, true);
+                        }
+                    });
+                });
+            }    
+        },
+        data: {
+		key: {
+			title: "id"
+		    }
+	    }
+    };
+    var settingGX = {
+        async: {
+            enable: true,
+            url: "http://zjspedu.cei.com.cn/dataadapter/common.ashx?method=MainTreeZtree&RootId=feadb61d3872441fb58209acb4274eb4",
+            autoParam: ["id", "name=n", "level=lv"],
+            otherParam: { "method": "TreeZtree" },
+            dataFilter: filter
+        },
+        check: {
+            enable: true,
+            chkStyle: "checkbox",
+            chkboxType: { "Y": "", "N": "" }
+        },
+        callback: {
+            onCheck: GXOnCheck,
+            onAsyncSuccess: function() 
+            {
+                var treeObj = $.fn.zTree.getZTreeObj("GXTree");
+                $.each(ThisGXStored, function (index, value) {
+                    $.get("http://zjspedu.cei.com.cn/dataadapter/common.ashx?method=MainTreeNodeZtree&id=" + value, function (data, status) {
+                        var pathList = data.split(";");
+                        $.each(pathList, function (index, value) {
+                            if (value != "") {
+                                var PathNode = treeObj.getNodeByParam("id", value, null);
+                                if (PathNode) {
+                                    treeObj.expandNode(PathNode, true, false, false);
+                                }
+                            }
+                        });
+                        var node = treeObj.getNodeByParam("id", value, null);
+                        if (node) {
+                            treeObj.checkNode(node, true, false, true);
+                        }
+                    });
+                });
+            }    
+        },
+        data: {
+		key: {
+			title: "id"
+		    }
+	    }
+    };
+    var CourseId="{{ temvarCourseId|safe }}";
+    var CourseProgress="{{ temvarCourseProgress|safe }}";
+    var InternalCategoryListLv2={{ temvarInternalCategoryListLv2|safe }};
+    $(document).ready(function(){
+        $.fn.zTree.init($("#DicTree"), settingDic);
+        $.fn.zTree.init($("#DZTree"), settingDZ);
+        $.fn.zTree.init($("#TYTree"), settingTY);
+        $.fn.zTree.init($("#GXTree"), settingGX);
+        $("#InternalCategory").val("{{temvarInternalCategoryIdTop}}");
+        var InternalCategoryListLv2Current=InternalCategoryListLv2.filter(function (e) { return e.parent_id == "{{temvarInternalCategoryIdTop}}"; });  
+        for(var i=0;i<InternalCategoryListLv2Current.length;i++){
+            $("#InternalCategoryLevel2").append("<option value='"+InternalCategoryListLv2Current[i].InternalCategoryId+"'>"+InternalCategoryListLv2Current[i].name+"</option>");
+        };
+        $("#InternalCategoryLevel2").val("{{temvarInternalCategoryId}}");
+        $("#InternalCategory").change(function(){
+            if ($("#InternalCategory").val=="")
+            { }
+            else{
+                $("#InternalCategoryLevel2").html("");
+                $("#InternalCategoryLevel2").append("<option value=''>请选择二级内部栏目</option>");
+                InternalCategoryListLv2Current=InternalCategoryListLv2.filter(function (e) { return e.parent_id ==$("#InternalCategory").val(); });  
+                for(var i=0;i<InternalCategoryListLv2Current.length;i++){
+                    $("#InternalCategoryLevel2").append("<option value='"+InternalCategoryListLv2Current[i].InternalCategoryId+"'>"+InternalCategoryListLv2Current[i].name+"</option>");
+                }  
+            }
+        });
+        /*按钮事件 OP*/
+        //var csrftoken = $.cookie('csrftoken');//引入其他js后$失效
+        var csrftoken=getCookie('csrftoken');
+        /* $("#PassBtn").click(function () {
+            $.ajax({
+            type: 'POST',
+            url: "/CourseMake/",
+            dataType: "json",
+            data: JSON.stringify({
+                "id": CourseId
+            }),
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            },
+            success: function (data) {
+                $("#PassPostbackNotice").text('已加入制作队列').hide(5000);
+                //console.log(data.status); // 
+            }
+            });
+        }); */
+        $("#PassBtn").click(function () {
+            var JsonData = { "id": CourseId, "PageCount": 0 };
+                $.ajax({
+                    type: 'POST',
+                    url: "/SubCheck/",
+                    data: JSON.stringify(JsonData),
+                    dataType: "json",
+                    beforeSend: function (xhr, settings) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    },
+                    success: function (data) {
+                        if (data["res"] == "pass") {
+                            $("#PassPostbackNotice").show();
+                            $("#PassPostbackNotice").text("基线测试通过，准备跳转").hide(3000);
+                            $.SubmitCourseForm("pass");
+                        }
+                        else {
+                            $("#PassPostbackNotice").show();
+                            $("#PassPostbackNotice").text(data["res"]).hide(5000);
+                        }
+                    }
+                });
+        });
+        $("#SaveBtn").click(function () {
+            $.SubmitCourseForm("save");
+        });
+        /*按钮事件 ED*/
+
+	});
+    /*Method OP*/
+    function filter(treeId, parentNode, childNodes) {
+        if (!childNodes) return null;
+        for (var i = 0, l = childNodes.length; i < l; i++) {
+            childNodes[i].name = childNodes[i].name.replace(/\.n/g, '.');
+        }
+        return childNodes;
+    }
+    function DicOnCheck(event, treeId, treeNode) {
+        //alert("知识树" + treeNode.tId + ", " + treeNode.name + "," + treeNode.checked);
+        var id = "seleceted_" + treeNode.tId;
+        if (treeNode.checked)
+        {
+            $("#SelectedDicTree").append("<span id='" + id + "'></span>");
+            $("#SelectedDicTree").children("#" + id).text(treeNode.name+";");
+            $("#SelectedDicTree").children("#" + id).attr("title",$("#"+treeNode.tId+"_a").attr("title"));
+        }
+        else
+        {
+            $("#SelectedDicTree").children("#" + id).remove();
+        }
+    };
+    function TYOnCheck(event, treeId, treeNode) {
+        //alert("TY" + treeNode.tId + ", " + treeNode.name + "," + treeNode.checked);
+        var id = "seleceted_" + treeNode.tId;
+        if (treeNode.checked)
+        {
+            $("#SelectedTYCategory").append("<span id='" + id + "'></span>");
+            $("#SelectedTYCategory").children("#" + id).text(treeNode.name+";");
+            $("#SelectedTYCategory").children("#" + id).attr("title",$("#"+treeNode.tId+"_a").attr("title"));
+        }
+        else
+        {
+            $("#SelectedTYCategory").children("#" + id).remove();
+        }
+    };
+    function DZOnCheck(event, treeId, treeNode) {
+        //alert("DZ" + treeNode.tId + ", " + treeNode.name + "," + treeNode.checked);
+        var id = "seleceted_" + treeNode.tId;
+        if (treeNode.checked)
+        {
+            $("#SelectedDZCategory").append("<span id='" + id + "'></span>");
+            $("#SelectedDZCategory").children("#" + id).text(treeNode.name+";");
+            $("#SelectedDZCategory").children("#" + id).attr("title",$("#"+treeNode.tId+"_a").attr("title"));
+        }
+        else
+        {
+            $("#SelectedDZCategory").children("#" + id).remove();
+        }
+    };
+    function GXOnCheck(event, treeId, treeNode) {
+        //alert("DZ" + treeNode.tId + ", " + treeNode.name + "," + treeNode.checked);
+        var id = "seleceted_" + treeNode.tId;
+        if (treeNode.checked)
+        {
+            $("#SelectedGXCategory").append("<span id='" + id + "'></span>");
+            $("#SelectedGXCategory").children("#" + id).text(treeNode.name+";");
+            $("#SelectedGXCategory").children("#" + id).attr("title",$("#"+treeNode.tId+"_a").attr("title"));
+        }
+        else
+        {
+            $("#SelectedGXCategory").children("#" + id).remove();
+        }
+    };
+    $.SubmitCourseForm = function (mode) {
+
+        $("#CourseInfoForm").attr("action","/CourseMake/?mode="+mode);  
+        //Categories Dic
+        var DicJson = [];
+        $.each($("#SelectedDicTree span"), function (i, item) {
+                var row = {};
+                row.id = item.title;
+                row.name = item.innerText.substr(0,item.innerText.length-1);
+                DicJson.push(row);
+        });
+        //Categories TY
+        var TYJson = [];
+        $.each($("#SelectedTYCategory span"), function (i, item) {
+                var row = {};
+                row.id = item.title;
+                row.name = item.innerText.substr(0,item.innerText.length-1);
+                TYJson.push(row);
+        });
+        //Categories DZ
+        var DZJson = [];
+        $.each($("#SelectedDZCategory span"), function (i, item) {
+                var row = {};
+                row.id = item.title;
+                row.name = item.innerText.substr(0,item.innerText.length-1);
+                DZJson.push(row);
+        });
+        //Categories GX
+        var GXJson = [];
+        $.each($("#SelectedGXCategory span"), function (i, item) {
+                var row = {};
+                row.id = item.title;
+                row.name = item.innerText.substr(0,item.innerText.length-1);
+                GXJson.push(row);
+        });
+        //
+        //var CategoryInput=$("<input type='text' name='categoryInput'/>");
+        //CategoryInput.attr("value", "");
+        //$("#CourseInfoForm").append(CategoryInput);
+        $("#DicCategoryInput").attr("value", JSON.stringify(DicJson));
+        $("#TYCategoryInput").attr("value", JSON.stringify(TYJson));
+        $("#DZCategoryInput").attr("value", JSON.stringify(DZJson));
+        $("#GXCategoryInput").attr("value", JSON.stringify(GXJson));
+        if ($("#CourseTitle").val()==""||$("#CourseTitle").val()=="None"||$("#CourseTitle").val() == null
+            ||$("#CourseGroup").val()==""||$("#CourseGroup").val()=="None"||$("#CourseGroup").val() == null
+            //||$("KeyWords").val()==""||$("#KeyWords").val()=="None"||$("#KeyWords").val() == null
+            ||$("#DicCategoryInput").val()=="[]"||$("#TYCategoryInput").val()=="[]"||$("#DZCategoryInput").val()=="[]"
+        )
+        {
+            $("#PassPostbackNotice").text("填写不完整").hide(10000);
+        }
+        else{
+        $("#CourseInfoForm").submit();
+        }
+    };
+    //GetQuery
+    (function ($) {
+            $.getUrlParam
+                = function (name) {
+                    var reg
+                        = new RegExp("(^|&)" +
+                            name + "=([^&]*)(&|$)");
+                    var r
+                        = window.location.search.substr(1).match(reg);
+                    if (r != null) return unescape(r[2]); return null;
+                }
+        })(jQuery);
+    //GetCookie
+        function getCookie(c_name) {
+            if (document.cookie.length > 0) {
+                c_start = document.cookie.indexOf(c_name + "=")
+                if (c_start != -1) {
+                    c_start = c_start + c_name.length + 1
+                    c_end = document.cookie.indexOf(";", c_start)
+                    if (c_end == -1) c_end = document.cookie.length
+                    return unescape(document.cookie.substring(c_start, c_end))
+                }
+            }
+            return ""
+        }
+    /*Method ED*/
+</script>
+{% endblock %}
+
+{% block content %}
+
+    <div class="col-lg-4">
+        <form id="CourseInfoForm" class="bs-example bs-example-form" role="form" method="post"><!--method不设置，表单get提交 -->
+            {% csrf_token %}
+            <div class="input-group">
+                <span class="input-group-addon">编号</span>
+                <input id="CourseId" name="courseId" type="text" class="form-control" placeholder="" value="{{temvarCourseId}}">
+            </div>
+            <br>
+            <div class="input-group">
+                <span class="input-group-addon">题目</span>
+                <input id="CourseTitle" name="title" type="text" class="form-control" placeholder="" value="{{temvarCourseTitle}}">
+                <span class="input-group-addon">{{temvarEpisode}}</span>
+            </div>
+            <br>
+            <div class="input-group">
+                <span class="input-group-addon">专题</span>
+                <input id="CourseGroup" name="groupName" type="text" class="form-control" placeholder="" required="required" value="{{temvarGroupName}}">
+            </div>
+            <br>
+            {% comment %} <div class="input-group">
+                <span class="input-group-addon">关键字(多个关键字用空格分隔)</span>
+                <input id="KeyWords" name="keyWords" type="text" class="form-control" placeholder="" required="required" value="{{temvarKeyWords}}">
+            </div> {% endcomment %}
+            <br>
+            <div class="input-group">
+                <select id="InternalCategory" name="internalCategory" class="form-control"  required="required">
+                    <option value="" selected="selected">选择一级内部分类</option>
+                    {% for item in temvarInternalCategoryListTop %}
+                    <option value="{{item.InternalCategoryId}}">{{item.name}}</option>
+                    {% endfor %}
+                </select>
+                <select id="InternalCategoryLevel2" name="internalCategoryLevel2" class="form-control"  required="required">
+                    <option value="">选择二级内部分类</option>
+                </select>
+            </div><!-- /input-group -->
+            <br/>
+            <div class="input-group" id="CategoryBox">
+                <label for="name">发布栏目</label>
+                <div id="SelectedDicTree" name="selectedDicTree" class="SelectedCategory"></div>
+                <div id="SelectedTYCategory" name="selectedTYCategory" class="SelectedCategory"></div>
+                <div id="SelectedDZCategory" name="selectedDZCategory" class="SelectedCategory"></div>
+                <div id="SelectedGXCategory" name="selectedGXCategory" class="SelectedCategory"></div>
+                <input type='text' id="DicCategoryInput" name='dicCategoryInput' hidden="hidden"/>
+                <input type='text' id="TYCategoryInput" name='tyCategoryInput' hidden="hidden"/>
+                <input type='text' id="DZCategoryInput" name='dzCategoryInput' hidden="hidden"/>
+                <input type='text' id="GXCategoryInput" name='gxCategoryInput' hidden="hidden"/>
+            </div>
+            <br>
+            <div class="btn-group btn-group-md">
+                <button id="SaveBtn" type="button" class="btn btn-primary">保存</button>
+                <button id="PassBtn" type="button" class="btn btn-primary">发布（加入制作队列）</button>
+            </div>
+            <div id="PassPostbackNotice"></div>
+        </form>
+    </div>
+    {% comment %} <div id="LecturerInfoBox">
+            <img id="LecturerPic" class='LecturerTabPageImg' src='{{temvarLecturerPic}}' />
+            <div id="LecturerNameInput" class="LecturerName" contenteditable="true">{{temvarLecturerName}}</div>
+            <div id="LecturerJobInput" class="LecturerJob" contenteditable="true">{{temvarLecturerPost}}</div>
+            <textarea id="LecturerSummaryText" class="LecturerTabPageSummary">{{temvarLecturerIntro}}</textarea>
+    </div> {% endcomment %}
+    <div class="TreeArea">
+    <div class="TreeBox">
+        <div>知识树</div>
+        <div id="DicTree" class="ztree" >Loading...</div>
+    </div>
+    <div class="TreeBox">
+        <div>通用版</div>
+        <div id="TYTree" class="ztree">Loading...</div>
+    </div>
+    <div class="TreeBox">
+        <div>党政版</div>
+        <div id="DZTree" class="ztree">Loading...</div>
+    </div>
+    <div class="TreeBox">
+            <div>高校版</div>
+            <div id="GXTree" class="ztree">Loading...</div>
+        </div>
+    </div>
+{% endblock %}

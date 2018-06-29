@@ -1,0 +1,54 @@
+﻿{% extends "app/LayoutLite.html" %}
+
+{% block content %}
+
+<h2>{{ title }}.</h2>
+<h3>{{ message }}</h3>
+
+{% load staticfiles %}
+<link rel="stylesheet" type="text/css" href="{% static 'app/bootstrap-table/bootstrap-table.css' %}" />
+<script src="{% static 'app/bootstrap-table/bootstrap-table.js' %}"></script>
+<script type="text/javascript">
+        /*初始化table数据*/
+        $(function(){
+            $("#MainTable").bootstrapTable({  
+                search: true,  
+                    columns: [{
+                        checkbox : true,
+                        field : '',
+                    }] 
+            });
+        });
+        function queryParams() {
+            return {
+
+            };
+        }
+</script>
+
+<table id="MainTable" data-query-params="queryParams" data-pagination="true">
+    <thead>
+    <tr>
+        <th>编号</th>
+        <th>课件名</th>
+        <th>创建时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in li %}
+    <tr>
+        <td>{{ item.CourseId }}</td>
+        <td>{{ item.title }}</td>
+        <td>{{ item.CreateDate }}</td>
+        <td>
+            <a href="{{ OperationLink1 }}{{ item.CourseId }}">{{ JobType1 }}</a>
+            <a href="{{ OperationLink2 }}{{ item.CourseId }}">{{ JobType2 }}</a>
+            <a href="{{ OperationLink3 }}{{ item.CourseId }}">{{ JobType3 }}</a>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

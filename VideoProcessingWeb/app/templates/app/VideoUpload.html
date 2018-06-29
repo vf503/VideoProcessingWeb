@@ -1,0 +1,107 @@
+﻿{% extends "app/layout.html" %}
+
+{% block head %}
+
+{% load staticfiles %}
+<link rel="stylesheet" type="text/css" href="{% static 'app/content/bootstrap-progressbar-3.3.4.css' %}" />
+<script src="{% static 'app/scripts/jquery.cookie.js' %}"></script>
+<script src="{% static 'app/scripts/bootstrap-progressbar.js' %}"></script>
+
+<script>
+    var xhr; 
+    //看这个函数之前先看upload函数。这个函数可以接收一个evt(event)对象(细节自行查询progress)，他有3个属性lengthComputable，loaded，total，第一个属性是个bool类型的，代表是否支持，第二个代表当前上传的大小，第三个为总的大小，由此便可以计算出实时上传的百分比
+    function on_progress(evt) {
+        if (evt.lengthComputable) {
+            //var ele = document.getElementById('2');
+            var percent = Math.round((evt.loaded) * 100 / evt.total);
+            //ele.style.width = percent + '%';
+            //document.getElementById('3').innerHTML = percent + '%';
+            updateProgress(percent);
+        }
+    }
+
+    function upload() {
+        xhr = new XMLHttpRequest();
+        //
+        var ThisTitle = $("#TitleInput");
+        //alert(ThisTitle.val());
+        var ThisFile = document.getElementById('FileInput').files[0];   //取得文件数据，而.file对象只是文件信息
+        //FormData是HTML5为实现序列化表单而提供的类，更多细节可自行查询
+        var form = new FormData();  
+        form.append('thisFileTitle', ThisTitle.val());
+        //这里为序列化表单对象form添加一个元素，即file
+        form.append('thisFileInput', ThisFile);  
+        //xhr对象含有一个upload对象，它有一个progress事件，在文件上传过程中会被不断触发，我们为这个事件对应一个处理函数，每当事件触发就会调用这个函数，于是便可利用这个函数来修改当前进度
+        xhr.upload.addEventListener('progress', on_progress, false);  
+        //
+        //xhr.onreadystatechange = callback;
+        //请将url改成上传url
+        xhr.open('POST', '/AjaxVideoUpload/', true);  
+        //此处为Django要求，或者换成相应后台所要求的CSRF防护，不是django用户请去掉
+        var CSRFToken = $.cookie('csrftoken'); 
+        xhr.setRequestHeader("X-CSRFToken", CSRFToken);
+        //发送表单
+        xhr.send(form);   
+		}
+
+    //$(document).ready(function () {
+    //    $('.progress .progress-bar').progressbar({ display_text: 'fill' });
+    //});
+
+    function updateProgress(percentage) {
+        $('.progress .progress-bar').attr('data-transitiongoal', percentage).progressbar({ display_text: 'fill' });
+    }
+
+    //回调函数
+    function callback() {
+        //判断对象的状态是交互完成
+        //XHR的交互状态readyState代号有：
+        /**
+          * 监听服务器返回的状态一共有五个状态：
+          * 0,1,2,3,4
+          * 0是啥都没有连接的时候
+          * 1是open方法还没被调用
+          * 2是open方法调用了，send方法没有执行
+          * 3是open方法执行了，send方法也执行了
+          * 4是返回结果的时候的状态(status) 
+          * */
+        if (xhr.readyState == 4) {
+            //判断http的交互是否成功
+            if (xhr.status == 200) {
+                //获取服务器端返回的数据
+                //一种是纯文本的形式，一种是DOM对象
+                var responseText = xhr.responseText;
+                //将数据显示在界面上
+                //通过DOM的方式找到div标签对应的元素节点
+                var divResult = document.getElementById("UploadResult");
+                //设置元素节点中的html内容
+                divResult.innerHTML = responseText;
+                alert(responseText);
+            }
+        }
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+
+<h2>{{ title }}.</h2>
+<h3>{{ message }}</h3>
+
+    <form class="form-horizontal" enctype="multipart/form-data" method="POST" action="VideoUpload" >
+        {% csrf_token %}
+        <label class="col-md-2 control-label" for="TitleInput">标题：</label>
+        <input class="col-md-6 form-control" type="text" id="TitleInput" name="fileTitle"  value="{{ temvarCourseTitle }}"/>
+        <label class="col-md-2 control-label" for="FileInput">选择文件：</label>
+        <input class="col-md-6 form-control" type="file" id="FileInput" name="fileInput" />
+        <!--<input type="submit" class="btn btn-default" value="上传视频" />-->
+        <button class="btn btn-default" type="button" onclick="upload();">上传</button>
+    </form>
+<div class="progress">
+    <div id="progressBar" class="progress-bar" role="progressbar" data-transitiongoal=""></div>
+</div>
+<div id="UploadResult">
+
+</div>
+
+{% endblock %}

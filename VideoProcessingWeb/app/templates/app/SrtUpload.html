@@ -1,0 +1,35 @@
+﻿{% extends "app/LayoutLite.html" %}
+
+{% block content %}
+
+<h2>{{ title }}.</h2>
+<h3>{{ message }}</h3>
+{% load staticfiles %}
+<script>
+var mode="{{tempvarMode}}";
+$(document).ready(function () {
+    if(mode=="slide"){
+        $("#mode").val("slide");
+        $("#SubmitBtn").val("上传幻灯片");
+    }
+    else{
+        
+    }
+});
+</script>
+
+    <form class="form-horizontal" enctype="multipart/form-data" method="POST" action="/SrtUpload/" >
+        {% csrf_token %}
+        <label class="col-md-2 control-label" for="CourseId">编号：</label>
+        <input class="col-md-6 form-control" type="text" value="{{ CourseId }}" id="CourseId" name="courseId" />
+        <br/>
+        <label class="col-md-6 control-label" name="CourseTitle">标题：{{ CourseTitle }}</label>
+        <br/>
+        <label class="col-md-2 control-label" for="fileSrt">选择文件：</label>
+        <input class="col-md-4 form-control" type="file" id="FileSrt" name="fileSrt"/>
+        <br/>
+        <input type="submit" id="SubmitBtn" class="btn btn-default" value="上传字幕" />
+        <input type="text" id="mode" name="mode" value="srt" hidden="hidden"/>
+    </form>
+
+{% endblock %}

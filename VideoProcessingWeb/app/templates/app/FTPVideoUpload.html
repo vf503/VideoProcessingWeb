@@ -1,0 +1,179 @@
+﻿{% extends "app/LayoutLite.html" %}
+
+{% block head %}
+
+{% load staticfiles %}
+<link rel="stylesheet" type="text/css" href="{% static 'app/content/bootstrap-progressbar-3.3.4.css' %}" />
+<script src="{% static 'app/scripts/jquery.cookie.js' %}"></script>
+<script src="{% static 'app/scripts/bootstrap-progressbar.js' %}"></script>
+
+<script>
+    var xhr; 
+    //看这个函数之前先看upload函数。这个函数可以接收一个evt(event)对象(细节自行查询progress)，他有3个属性lengthComputable，loaded，total，第一个属性是个bool类型的，代表是否支持，第二个代表当前上传的大小，第三个为总的大小，由此便可以计算出实时上传的百分比
+    function on_progress(evt) {
+        if (evt.lengthComputable) {
+            //var ele = document.getElementById('2');
+            var percent = Math.round((evt.loaded) * 100 / evt.total);
+            //ele.style.width = percent + '%';
+            //document.getElementById('3').innerHTML = percent + '%';
+            updateProgress(percent);
+        }
+    } 
+    function upload() {
+        /* 
+        xhr = new XMLHttpRequest();
+        //
+        var ThisTitle = $("#TitleInput");
+        //alert(ThisTitle.val());
+        //var ThisFile = document.getElementById('FileInput').files[0];   //取得文件数据，而.file对象只是文件信息
+        var ThisFile = document.getElementById('FileInput');
+        //FormData OP (FormData是HTML5为实现序列化表单而提供的类)//
+        var form = new FormData();  
+        //这里为序列化表单对象form添加一个元素，即file
+        form.append('FileInput', ThisFile);  
+        form.append('ProjectId', $("#ProjectIdInput").val());
+        form.append('CourseTitle', $("CourseTitle").val());
+        form.append('lecturer',  $("LecturerInput").val());
+        form.append('WorkType', $("WorkTypeInput").val());
+        //FormData ED//  
+        //xhr对象含有一个upload对象，它有一个progress事件，在文件上传过程中会被不断触发，我们为这个事件对应一个处理函数，每当事件触发就会调用这个函数，于是便可利用这个函数来修改当前进度     
+        xhr.upload.addEventListener('progress', on_progress, false);  
+        //xhr.onreadystatechange = callback;
+        //请将url改成上传url
+        xhr.open('POST', '/FTPVideoUpload/', true);  
+        //此处为Django要求，或者换成相应后台所要求的CSRF防护，不是django用户请去掉
+        var CSRFToken = $.cookie('csrftoken'); 
+        xhr.setRequestHeader("X-CSRFToken", CSRFToken);
+        //发送表单
+        xhr.send(form); 
+        */   
+            //
+            $("#UploadResult").text("开始上传 请等待...");
+            var file = $("#FileInput")[0].files[0],  //文件对象
+                name = file.name,        //文件名
+                size = file.size,        //总大小
+                succeed = 0;
+            var shardSize = 10 * 1024 * 1024,     //以2MB为一个分片
+                shardCount = Math.ceil(size / shardSize);   //总片数
+            //    
+            for (var i = 0; i < shardCount; ++i) {
+                //计算每一片的起始与结束位置
+                var start = i * shardSize,
+                    end = Math.min(size, start + shardSize);
+                //构造一个表单，FormData是HTML5新增的
+                var form = new FormData();
+                form.append("FileInput", file.slice(start, end));  //slice方法用于切出文件的一部分
+                form.append("name", name);
+                form.append("total", shardCount);   //总片数
+                form.append("index", i + 1);        //当前是第几片
+                //课件信息 OP
+                form.append('ProjectId', $("#ProjectIdInput").val());
+                form.append('CourseTitle', $("#CourseTitleInput").val());
+                form.append('lecturer', $("#LecturerInput").val());
+                form.append('WorkType', $("#WorkTypeInput").val());
+                form.append('CourseId', $("#CourseIdInput").val());
+                //课件信息 ED
+                //Ajax提交
+                var csrftoken = $.cookie('csrftoken');
+                $.ajax({
+                    url: "/FTPVideoUpload/",//无结尾斜线：You called this URL via POST, but the URL doesn't end in a slash
+                    type: "POST",
+                    data: form,
+                    async: true,         //异步
+                    processData: false,  //很重要，告诉jquery不要对form进行处理
+                    contentType: false,  //很重要，指定为false才能形成正确的Content-Type
+                    timeout: 3000000, //超时时间：30秒
+                    beforeSend: function (xhr, settings) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    },
+                    success: function () {
+                        ++succeed;
+                        var percent = Math.round(succeed * 100 / shardCount);
+                        updateProgress(percent);
+                        if(succeed==shardCount)
+                        {
+                            
+                            $("#UploadResult").text(succeed + " / " + shardCount + " : Finished！");
+                        }
+                        else
+                        {
+                            $("#UploadResult").text(succeed + " / " + shardCount);
+                        }
+                    }
+                });
+            }
+        //
+		}
+
+    //$(document).ready(function () {
+    //    $('.progress .progress-bar').progressbar({ display_text: 'fill' });
+    //});
+
+    function updateProgress(percentage) {
+        $('.progress .progress-bar').attr('data-transitiongoal', percentage).progressbar({ display_text: 'fill' });
+    }
+
+    //回调函数
+    function callback() {
+        //判断对象的状态是交互完成
+        //XHR的交互状态readyState代号有：
+        /**
+          * 监听服务器返回的状态一共有五个状态：
+          * 0,1,2,3,4
+          * 0是啥都没有连接的时候
+          * 1是open方法还没被调用
+          * 2是open方法调用了，send方法没有执行
+          * 3是open方法执行了，send方法也执行了
+          * 4是返回结果的时候的状态(status) 
+          * */
+        if (xhr.readyState == 4) {
+            //判断http的交互是否成功
+            if (xhr.status == 200) {
+                //获取服务器端返回的数据
+                //一种是纯文本的形式，一种是DOM对象
+                var responseText = xhr.responseText;
+                //将数据显示在界面上
+                //通过DOM的方式找到div标签对应的元素节点
+                var divResult = document.getElementById("UploadResult");
+                //设置元素节点中的html内容
+                divResult.innerHTML = responseText;
+                alert(responseText);
+            }
+        }
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+
+<h2>{{ title }}.</h2>
+<h3>{{ message }}</h3>
+
+    <form class="form-horizontal" enctype="multipart/form-data" method="POST" action="/PlayVideo" >
+        {% csrf_token %}
+        <input class="col-md-6 form-control" type="text" id="ProjectIdInput" name="projectId" readonly="readonly"  value="{{ temvarProjectId }}"/>
+        <br/>
+        <input class="col-md-6 form-control" type="text" id="CourseTitleInput" name="courseTitle" readonly="readonly" value="{{ temvarCourseTitle }}"/>
+        <br/>
+        <input class="col-md-6 form-control" type="text" id="LecturerInput" name="lecturer" readonly="readonly" value="{{ temvarLecturer }}"/>
+        <br/>
+        <input class="col-md-6 form-control" type="text" id="WorkTypeInput" name="workType" readonly="readonly" value="{{ temvarWorkType }}"/>
+        <br/>
+        <input class="col-md-6 form-control" type="text" id="CourseIdInput" name="courseId" readonly="readonly" value="{{ temvarCourseId }}"/>
+        <br/>
+        <!--
+        <label class="col-md-2 control-label" for="FileInput">选择文件：</label>
+        <input class="col-md-6 form-control" type="file" id="FileInput" name="fileInput" accept="video/mp4"/>
+        --> 
+        <input type="submit" class="btn btn-default" value="上传完成" />
+        <!--<button class="btn btn-default" type="button" onclick="upload();">上传</button>--> 
+    </form>
+<!--
+<div class="progress">
+    <div id="progressBar" class="progress-bar" role="progressbar" data-transitiongoal=""></div>
+</div>
+<div id="UploadResult">
+
+</div>
+--> 
+{% endblock %}

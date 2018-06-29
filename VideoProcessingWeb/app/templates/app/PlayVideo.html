@@ -1,0 +1,45 @@
+﻿{% extends "app/LayoutLite.html" %}
+
+{% block content %}
+
+<h2>{{ title }}.</h2>
+<h3>{{ message }}</h3>
+
+{% load staticfiles %}
+<link rel="stylesheet" type="text/css" href="{% static 'app/bootstrap-table/bootstrap-table.css' %}" />
+<script src="{% static 'app/bootstrap-table/bootstrap-table.js' %}"></script>
+
+<script type="text/javascript">
+var TaskCount="{{temvarIsTaskExists}}";
+$(document).ready(function () {
+    if(TaskCount=="0"){
+
+    }
+    else{
+        $("#SubmitBtn").hide();
+    }
+});
+
+</script>
+
+<div class="row">
+<div class="col-md-8">
+    <video id="VideoPlayer" src="{{ VideoFilePath }}" controls="controls">
+        您的浏览器不支持HTML5 Video
+    </video>
+</div>
+<div class="col-md-8">
+        <video id="RawVideoPlayer" src="{{ RawVideoFilePath }}" controls="controls">
+            您的浏览器不支持HTML5 Video
+        </video>
+    </div>
+</div>
+<form class="form-horizontal" enctype="multipart/form-data" method="POST" action="/PlayVideo" >
+    {% csrf_token %}
+    <input class="col-md-6 form-control" type="text" id="ProjectId" name="projectId" readonly="readonly" value="{{ temvarProjectId }}"/>
+    <br/>
+    <input id="SubmitBtn" type="submit" class="btn btn-default" value="发送讯飞制作" />
+    <input type="button" name="close" class="btn btn-default" value="关闭" onclick="window.close();" />
+</form>
+
+{% endblock %}

@@ -1,0 +1,248 @@
+﻿{% extends "app/layout.html" %}
+
+{% block content %}
+
+<h2>{{ title }}.</h2>
+<h3>{{ message }}</h3>
+
+{% load staticfiles %}
+<link rel="stylesheet" type="text/css" href="{% static 'app/bootstrap-table/bootstrap-table.css' %}" />
+<script src="{% static 'app/bootstrap-table/bootstrap-table.js' %}"></script>
+<!-- -->
+<style type="text/css">
+    #FullTextPanel{
+        height:700px;
+        overflow-y:scroll;
+    }
+    .SentenceDefault{
+        border:solid 1px LightSteelBlue;
+        padding:2px 2px 2px 5px;
+        margin:0px 2px 5px 2px;
+        display:block;
+        float:left
+    }
+     .SentenceCurrent{
+        border:solid 1px SteelBlue;
+        color:MidnightBlue;
+        padding:2px 2px 2px 5px;
+        margin:0px 2px 5px 2px;
+        display:block;
+        float:left
+    }
+    .SentenceBeginningOfParagraphDefault{
+        border:solid 1px LightSteelBlue;
+        padding:2px 2px 2px 5px;
+        margin:0px 2px 5px 35px;
+        display:block;
+        float:left;
+        clear:left
+            
+    }
+    .SentenceBeginningOfParagraphCurrent{
+        border:solid 1px LightSteelBlue;
+        color:MidnightBlue;
+        padding:2px 2px 2px 5px;
+        margin:0px 2px 5px 35px;
+        display:block;
+        float:left;
+        clear:left
+    }
+    .SubTitleBox{
+        width:100%;
+    }
+    .SubTitleDelBtn{
+        float:left;
+        height:20px;
+        display:block;
+    }
+</style>
+<script type="text/javascript">
+     var JsonStr ={{ temvarJsonData|safe }};
+</script>
+<script type="text/javascript">
+    //全局var
+    var CurrentFocusItem = "";
+    var CurrentSubItemIndex = "";
+    var SubTitleCount = 0;
+
+    $(document).ready(function ()
+    {
+        //局部var
+        var ThisJsonStr = JsonStr;     
+        //
+        $.LoadJsonData("FullTextPanel", ThisJsonStr);
+        //$("span[id^='SubItem']").click(function (){ });//id属性以yyy开始的所有xxx标签
+        $("#ParagraphAddBtn").click(function ()
+        {
+            if (CurrentFocusItem.indexOf("SubItem") == 0)
+            {              
+                $("#" + CurrentFocusItem).attr("class", "SentenceBeginningOfParagraphCurrent");
+                $("#" + CurrentFocusItem).attr("IsBeginningOfParagraph", "true");
+            }
+            else { }
+        });
+        $("#TitleAddBtn").click(function ()
+        {
+            if (CurrentFocusItem.indexOf("SubItem") == 0) {   
+                //
+                $("#" + CurrentFocusItem).attr("class", "SentenceBeginningOfParagraphDefault");
+                $("#" + CurrentFocusItem).attr("IsBeginningOfParagraph", "true");
+                //
+                var PreTitleItemId = "";
+                $("#FullTextPanel").children().each(function ()
+                {
+                    if ($(this).attr("id") == CurrentFocusItem) {
+                        CurrentSubItemIndex = $(this).index();
+                        return false;
+                    }
+                    else { }
+                });
+                for (i = CurrentSubItemIndex-1; i >= 0; i--)
+                {
+                    if ($("#FullTextPanel").children().eq(i).attr("id").indexOf("TitleItem") == 0) {
+                        PreTitleItemId = $("#FullTextPanel").children().eq(i).attr("id");
+                        break;
+                    }
+                    else { }
+                }
+                SubTitleCount += 1;
+                //
+                var ThisDiv = "<div id='TitleItem_" + SubTitleCount + "'></div>";
+                $("#" + CurrentFocusItem).before(ThisDiv);
+                $("#TitleItem_" + SubTitleCount).attr("class", "SubTitleBox");
+                $("#TitleItem_" + SubTitleCount).append("<span></span>");
+                $("#TitleItem_" + SubTitleCount).children("span").attr("class", "SentenceBeginningOfParagraphCurrent");
+                $("#TitleItem_" + SubTitleCount).children("span").attr("contentEditable", "true");
+                $("#TitleItem_" + SubTitleCount).children("span").width($("#TitleItem_" + SubTitleCount).width()-120);
+                $("#TitleItem_" + SubTitleCount).children("span").focus(function ()
+                {
+                    CurrentFocusItem = "TitleItem_" + SubTitleCount;
+                    $("#TitleItem_" + SubTitleCount).children("span").attr("class", "SentenceBeginningOfParagraphCurrent");  
+                });
+                $("#TitleItem_" + SubTitleCount).children("span").blur(function ()
+                {
+                    $("#TitleItem_" + SubTitleCount).children("span").attr("class", "SentenceBeginningOfParagraphDefault");
+                    $("#TitleLi_" + SubTitleCount).text($("#TitleItem_" + SubTitleCount).children("span").text());
+                });
+                $("#TitleItem_" + SubTitleCount).append("<button></button>");
+                $("#TitleItem_" + SubTitleCount).children("button").attr("type", "button");
+                $("#TitleItem_" + SubTitleCount).children("button").attr("class", "btn btn-primary btn-xs SubTitleDelBtn");
+                $("#TitleItem_" + SubTitleCount).children("button").text("-");
+                $("#TitleItem_" + SubTitleCount).children("button").click(function ()
+                {
+                    $("#TitleItem_" + SubTitleCount).remove();
+                });
+                //
+                var ThisLi = "<li id='TitleLi_" + SubTitleCount + "'></li>";
+                if (PreTitleItemId == "") {
+                    $("#SubTitlePanel").prepend(ThisLi);
+                    $("#TitleLi_" + SubTitleCount).attr("class", "SentenceDefault")
+                }
+                else {
+                    $("#TitleLi_" + PreTitleItemId.split("_")[1]).after(ThisLi);
+                    $("#TitleLi_" + SubTitleCount).attr("class", "SentenceDefault")
+                }
+            }
+            else { }
+        });
+    });
+    //Method
+    $.LoadJsonData = function (container, JsonStr)
+    {
+        var JsonData = JsonStr;
+        //var JsonData = JSON.parse(JsonStr);
+        $.each(JsonData, function (i, item)
+        {
+            if (JsonData[i].type == 'SubItem')
+            {
+                //var ThisInput = "<input id='SubItem_" + JsonData[i].index + "'></input>";
+                //$("#" + container).append(ThisInput);
+                //$("#SubItem_" + JsonData[i].index).attr("type","text");
+                //$("#SubItem_" + JsonData[i].index).attr("class","form-control");
+                //$("#SubItem_" + JsonData[i].index).attr("value", JsonData[i].content);
+                //
+                var ThisSpan = "<span id='SubItem_" + JsonData[i].index + "'></span>";
+                $("#" + container).append(ThisSpan);
+                $("#SubItem_" + JsonData[i].index).text(JsonData[i].content);
+                $("#SubItem_" + JsonData[i].index).attr("contentEditable", "true");
+                $("#SubItem_" + JsonData[i].index).attr("StartTime", JsonData[i].start);
+                $("#SubItem_" + JsonData[i].index).attr("EndTime", JsonData[i].end);
+                $("#SubItem_" + JsonData[i].index).attr("PPTOutline", JsonData[i].PPTOutline);
+                $("#SubItem_" + JsonData[i].index).attr("PPTPagination", JsonData[i].PPTPagination);
+                $("#SubItem_" + JsonData[i].index).attr("index", JsonData[i].index);
+                if (i == 0)
+                {
+                    $("#SubItem_" + JsonData[i].index).attr("class", "SentenceBeginningOfParagraphDefault");
+                    $("#SubItem_" + JsonData[i].index).attr("IsBeginningOfParagraph","true");
+                }
+                else
+                {
+                    $("#SubItem_" + JsonData[i].index).attr("class", "SentenceDefault");
+                    $("#SubItem_" + JsonData[i].index).attr("IsBeginningOfParagraph",JsonData[i].IsBeginningOfParagraph);
+                }
+                //
+                $("#SubItem_" + JsonData[i].index).focus(function ()
+                {
+                    CurrentFocusItem = "SubItem_" + JsonData[i].index;
+                    if ($("#" + CurrentFocusItem).attr("IsBeginningOfParagraph") == "true")
+                    {
+                        $("#SubItem_" + JsonData[i].index).attr("class", "SentenceBeginningOfParagraphCurrent");
+                    }
+                    else
+                    {
+                        $("#SubItem_" + JsonData[i].index).attr("class", "SentenceCurrent");
+                    }
+                    VideoPlayer.currentTime = (Number(JsonData[i].start/1000)).toFixed(2);
+                });
+                $("#SubItem_" + JsonData[i].index).blur(function ()
+                {
+                    if ($("#" + CurrentFocusItem).attr("IsBeginningOfParagraph") == "true")
+                    {
+                        $("#SubItem_" + JsonData[i].index).attr("class", "SentenceBeginningOfParagraphDefault");
+                    }
+                    else
+                    {
+                        $("#SubItem_" + JsonData[i].index).attr("class", "SentenceDefault");
+                    } 
+                });
+            }
+            else if (JsonData[i].type == 'TitleItem')
+            {
+
+            }
+            else { }
+        });
+
+    }
+</script>
+
+<div class="row">
+    <div class="col-md-4" >
+        <div>
+            <video id="VideoPlayer" src="{{ temvarVideoPath }}" style="width:360px; height:220px" controls="controls" autoplay="autoplay">
+            您的浏览器不支持HTML5 Video
+            </video>
+            <ul id="SubTitlePanel" class="unstyled">
+            </ul>
+
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="btn-group btn-group-sm">
+            <button id="ParagraphAddBtn" type="button" class="btn btn-primary">分段+</button>
+            <button id="TitleAddBtn" type="button" class="btn btn-primary">标题+</button>
+        </div>
+        <div id="FullTextPanel">
+            <!--<form  role="form" class="form-inline">
+            </form>-->
+        </div>
+        <div>
+            <a href="/SlideEdit/?id=000" target="_self">创建PPT</a>
+        </div>
+    </div>
+    <span id="JsonData" class="hidden" >
+        {{ temvarJsonData }}
+     </span>
+</div>
+
+{% endblock %}
