@@ -95,6 +95,7 @@ urlpatterns = [
     #REST
     url(r'^', include(RestRouter.urls)),
     #url(r'^edittask/$', app.views.EditTask_list),
+    #url(r'^edittask/(?P<userid>[\s\S]*)/$', app.views.EditTaskList.as_view()),
     url(r'^edittask/$', app.views.EditTaskList.as_view()),
     url(r'^coursetemplet/$', app.views.CourseTempletList.as_view()),
     url(r'^api-token-auth/', obtain_jwt_token),

@@ -17,6 +17,7 @@
     #FullTextPanel{
         height:700px;
         overflow-y:scroll;
+        clear:both;
     }
     .SentenceDefault{
         border:solid 1px LightSteelBlue;
@@ -152,7 +153,7 @@
     position: relative;
     }
     #LecturerSendRes{
-        color: darkred
+        color:green
     }
     #CourseAbstractBox textarea{
         max-width:380px;
@@ -162,8 +163,30 @@
     .LecturerName{
         border: 1px solid #BEBEBE;
     }
+    .LecturerName:empty:before{
+        content:attr(placeholder);
+        font-size: 16px;
+        color: green;
+    }
+    .LecturerName:focus{
+        content:none;
+    }
     .LecturerJob{
         border: 1px solid #BEBEBE;
+    }
+    #NoticeBox{
+        color: green;
+    }
+    #TestFileState{
+        color: green;
+    }
+    .LecturerJob:empty:before{
+        content:attr(placeholder);
+        font-size: 16px;
+        color: green;
+    }
+    .LecturerJob:focus{
+        content:none;
     }
 </style>
 
@@ -305,14 +328,22 @@
                 $("#DocFrame").attr("src", IframeUrl.replace("&amp;", "&"));
             }
             //
-            var WaitObject = $("#PptEditingStatusBar\\.SlideInformation-Medium14 span:eq(0)", getframe('DocFrame')).html();
-            $("#PptEditingStatusBar\\.SlideInformation-Medium14 span:eq(0)", getframe('DocFrame')).waitStatusBar(WaitObject, function () {
+            $("#PptEditingStatusBar\\.SlideInformation-Medium14 span:eq(0)", getframe('DocFrame')).waitStatusBar(function () {
                 SlidePageCount = $.GetSlidePageCount();
                 //chindren(),find()不支持bind(),html()
                 var thisStatusBar = $("#PptEditingStatusBar\\.SlideInformation-Medium14 span:eq(0)", getframe('DocFrame'));
-                thisStatusBar.bind('DOMNodeInserted', function (e) {
+                //var thisStatusBar = getframe('DocFrame').contentWindow.document.getElementById("SlideInformation-Medium14");
+                //var thisStatusBar = $("#EditingThumbnailsPanel", getframe('DocFrame'));
+                console.log(thisStatusBar.get(0));
+                var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
+                var MutationObserverConfig={
+                    childList: true,
+                    subtree: true,
+                    characterData: true
+                };
+                var observer=new MutationObserver(function(mutations){
                     //alert(thisStatusBar.html());               
-                    //alert($.GetSlidePage()+"/"+SlidePageCount+"//"+$.GetSlidePageCount());
+                    console.log($.GetSlidePage()+"/"+SlidePageCount+"//"+$.GetSlidePageCount());
                     //
                     var tempCurrentSlidePage = $.GetSlidePage();
                     if (tempCurrentSlidePage != CurrentSlidePage) {
@@ -377,6 +408,76 @@
                     }
                     else { }
                 });
+                observer.observe(thisStatusBar.get(0),MutationObserverConfig);
+                /*
+                thisStatusBar.bind('DOMSubtreeModified', function (e) {
+                    //alert(thisStatusBar.html());               
+                    console.log($.GetSlidePage()+"/"+SlidePageCount+"//"+$.GetSlidePageCount());
+                    //
+                    var tempCurrentSlidePage = $.GetSlidePage();
+                    if (tempCurrentSlidePage != CurrentSlidePage) {
+                        CurrentSlidePage = tempCurrentSlidePage;
+                        if ($("[PPTPagination=" + CurrentSlidePage + "]").html() != null && $("[PPTPagination=" + CurrentSlidePage + "]").html() != undefined) {
+                            //alert(("#FullTextPanel").scrollTop);
+                            //alert($("[PPTPagination=" + CurrentSlidePage + "]").offset().top);
+                            //alert($("#FullTextPanel").scrollTop());
+                            //$("#FullTextPanel").scrollTop($("[PPTPagination=" + CurrentSlidePage + "]").offset().top);
+                            if ($(".SentenceCurrentSkip").html() != null && $(".SentenceCurrentSkip").html() != undefined) {
+                                $(".SentenceCurrentSkip").attr("class", "SentenceDefault");
+                            }
+                            else { }
+                            $("[PPTPagination=" + CurrentSlidePage + "]").attr("class", "SentenceCurrentSkip");
+                        }
+                        else { }
+                    }
+                    else { }
+                    var tempSlidePageCount = $.GetSlidePageCount();
+                    if (tempSlidePageCount != SlidePageCount) {
+                        if (SlidePageCount == 0) {
+                            SlidePageCount = tempSlidePageCount;
+                        }
+                        else if (tempSlidePageCount - SlidePageCount == 1) {
+                            var NewPaginationNum = $.GetSlidePage() + 1;
+                            var PPTIdList = new Array();
+                            for (var i = NewPaginationNum; i <= tempSlidePageCount; i++) {
+                                if ($("[PPTPagination=" + i + "]").html() != null && $("[PPTPagination=" + i + "]").html() != undefined) {
+                                    PPTIdList.push($("[PPTPagination=" + i + "]").attr("id"));
+                                }
+                            }
+                            for (var j = 0; j < PPTIdList.length; j++) {
+                                var tempNewPagination = parseInt($("[id=" + PPTIdList[j] + "]").attr("PPTPagination")) + 1;
+                                $("[id=" + PPTIdList[j] + "]").attr("PPTPagination", tempNewPagination);
+                                $("[id=" + PPTIdList[j] + "]").children("button").text("S" + tempNewPagination + "-");
+                            }
+                            SlidePageCount = tempSlidePageCount;
+                        }
+                        else if (tempSlidePageCount - SlidePageCount == -1) {
+                            if ($("[PPTPagination=" + $.GetSlidePage() + "]").html() != null && $("[PPTPagination=" + $.GetSlidePage() + "]").html() != undefined) {
+                                //del 
+                                $("[PPTPagination=" + $.GetSlidePage() + "]").children("button").remove();
+                                //alert($("[PPTPagination=" + $.GetSlidePage() + "]").children("button").text());
+                                $("[PPTPagination=" + $.GetSlidePage() + "]").attr("PPTPagination", 0);
+
+                                $("[PPTPagination=" + $.GetSlidePage() + "]").children("button").remove();
+                            }
+                            var PPTIdList = new Array();
+                            for (var i = $.GetSlidePage() + 1; i <= tempSlidePageCount; i++) {
+                                if ($("[PPTPagination=" + i + "]").html() != null && $("[PPTPagination=" + i + "]").html() != undefined) {
+                                    PPTIdList.push($("[PPTPagination=" + i + "]").attr("id"));
+                                }
+                            }
+                            for (var j = 0; j < PPTIdList.length; j++) {
+                                var NewPagination = parseInt($("[id=" + PPTIdList[j] + "]").attr("PPTPagination")) - 1;
+                                $("[id=" + PPTIdList[j] + "]").attr("PPTPagination", NewPagination);
+                                $("[id=" + PPTIdList[j] + "]").children("button").text("S" + NewPagination + "-");
+                            }
+                            SlidePageCount = tempSlidePageCount;
+                        }
+                        else { }
+                    }
+                    else { }
+                });
+                */
             });
         });
         $("#PlayerBtn").click(function () {
@@ -515,6 +616,30 @@
         });
         $("#EditToggleBtn").click(function () {
             $.LoadJsonData("FullTextPanel", ThisJsonStr);
+        });
+        var csrftoken=getCookie('csrftoken');
+        $("#PassBtn").click(function () {
+            var SlidePageCount = $.GetSlidePageCount();
+            var JsonData = { "id": CourseId, "PageCount": SlidePageCount };
+                $.ajax({
+                    type: 'POST',
+                    url: "/SubCheck/",
+                    data: JSON.stringify(JsonData),
+                    dataType: "json",
+                    beforeSend: function (xhr, settings) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    },
+                    success: function (data) {
+                        if (data["res"] == "pass") {
+                            $("#NoticeBox").show();
+                            $("#NoticeBox").text("基线测试通过").hide(3000);
+                        }
+                        else {
+                            $("#NoticeBox").show();
+                            $("#NoticeBox").text(data["res"]).hide(5000);
+                        }
+                    }
+                })
         });
         /*按钮事件 ED*/
         /*播放器事件 OP*/
@@ -755,7 +880,7 @@
         var csrftoken = $.cookie('csrftoken');
         $.ajax({
             type: 'POST',
-            url: "/JsonDataRestore/",
+            url: "/JsonDataRestore/?id="+CourseId,
             data: JSON.stringify(JsonData),
             beforeSend: function (xhr, settings) {
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
@@ -1083,21 +1208,65 @@
             },
             success: function (result) {
                 r=JSON.parse(result);
-                CurrentLecturerId=r['id']
-                $("#LecturerReSelectBtn").hide();
-                $("#LecturerSendRes").show();
-                $("#LecturerSendRes").text('已保存!').hide(5000);
-                //console.debug("lecturer");
-                $("#LecturerPic").attr("src",r['PicSrc']);
+                if (r['res']=="success"){
+                    CurrentLecturerId=r['id']
+                    $("#LecturerReSelectBtn").hide();
+                    $("#LecturerSendRes").show();
+                    $("#LecturerSendRes").text('已保存!').hide(50000);
+                    //console.debug("lecturer");
+                    $("#LecturerPic").attr("src",r['PicSrc']);
+                }
+                else{ 
+                    $("#LecturerSendRes").show();
+                    $("#LecturerSendRes").text(r['res']).hide(50000);
+                }
             }
         });
     };
     $.SaveTestFile=function (){
         var form = new FormData(); 
         if ($("#TestFileInput").val() !='')
-        {
-            form.append("ProjectNo",$.getUrlParam('ProjectNo'));
-            form.append("TestFileInput",$("#TestFileInput")[0].files[0]);
+        {            
+            var myfile = document.getElementById('TestFileInput');
+            var filevalue = myfile.value;
+            var index = filevalue.lastIndexOf('.');
+            var mydate = new Date();
+            if(myfile.files[0] == undefined){
+                $("#TestFileState").show();
+                $("#TestFileState").text("未选择文件").hide(5000);
+                return false;
+            }
+            else if (filevalue.substring(index)!=".zip") {
+                $("#TestFileState").show();
+                $("#TestFileState").text("只接受zip文件").hide(5000);
+                return false;
+            }
+            else {
+            //
+            $("#TestFileState").show();
+            $("#TestFileState").text("开始上传，请等待结果").hide(5000);
+            var form = new FormData(); 
+            form.append("",$("#TestFileInput")[0].files[0]);
+            form.append("name","test.zip");
+            //Ajax提交
+            $.ajax({
+                url: "http://203.207.118.112/api/files/"+CourseId,
+                type: "POST",
+                data: form,
+                async: true,         //异步
+                processData: false,  //很重要，告诉jquery不要对form进行处理
+                contentType: false,  //很重要，指定为false才能形成正确的Content-Type
+                //timeout: 30000000, //超时时间：30秒
+                success: function (result) {
+                    //r=JSON.parse(result);
+                    //var name=r['Name'];
+                    //
+                    $("#TestFileState").show();
+                    $("#TestFileState").text("上传成功").hide(5000);
+                }
+            });
+            } 
+            /*
             var csrftoken = $.cookie('csrftoken');
             $.ajax({
             url: "/SaveTestFile/",//无结尾斜线：You called this URL via POST, but the URL doesn't end in a slash
@@ -1117,12 +1286,14 @@
                 $("#TestFileDownload").attr('href',r['Src']);
             }
             });
+            */
         }
     };
     $.SlideUpload=function (){
         var form = new FormData(); 
         if ($("#SlideUploadInput").val() !='')
         {
+            $("#SlideUploadState").show();
             $("#SlideUploadState").text('Uploading...');
             form.append("ProjectNo",$.getUrlParam('ProjectNo'));
             form.append("SlideUploadInput",$("#SlideUploadInput")[0].files[0]);
@@ -1164,15 +1335,15 @@
                 }
         })(jQuery);
     //
-    jQuery.fn.waitStatusBar = function (TargetObject, func, times, interval) {
-        var _times = times || 100, //100次
-            _interval = interval || 1000, //20毫秒每次 
+    jQuery.fn.waitStatusBar = function (func, times, interval) {
+        var _times = times || 500, //100次
+            _interval = interval || 500, //20毫秒每次 
             _self = this,
             _selector = this.selector, //选择器
             _iIntervalID; //定时器id
         //alert($("#PptEditingStatusBar\\.SlideInformation-Medium14 span:eq(0)",document.frames['DocFrame'].document).html());
-        if (TargetObject) { //如果已经获取到了，就直接执行函数
-            //alertalert(_times);
+        if (this) { //如果已经获取到了，就直接执行函数
+            //alert(_times);
             func && func.call(this);
         } else {
             _iIntervalID = setInterval(function () {
@@ -1180,10 +1351,10 @@
                     clearInterval(_iIntervalID);
                 }
                 _times <= 0 || _times--; //如果是正数就 --
-                //alert(_times);
+                //console.log(_times);
                 _self = $(_selector); //再次选择
-                //alert($("#PptEditingStatusBar\\.SlideInformation-Medium14 span:eq(0)",document.frames['DocFrame'].document).html())
-                if (TargetObject) { //判断是否取到
+                //console.log(_self);
+                if (_self) { //判断是否取到
                     func && func.call(_self);
                     clearInterval(_iIntervalID);
                 }
@@ -1196,6 +1367,19 @@
         var Oframe=document.getElementById(_id).contentDocument||document.frames[_id].document;        
         return Oframe;        
     }   
+    //GetCookie
+    function getCookie(c_name) {
+        if (document.cookie.length > 0) {
+            c_start = document.cookie.indexOf(c_name + "=")
+            if (c_start != -1) {
+                c_start = c_start + c_name.length + 1
+                c_end = document.cookie.indexOf(";", c_start)
+                if (c_end == -1) c_end = document.cookie.length
+                return unescape(document.cookie.substring(c_start, c_end))
+            }
+        }
+        return ""
+    }
     /*Method ED*/
 </script>
 
@@ -1263,10 +1447,10 @@
                 </div>
                 <div id="LecturerInfoBox" style="display:none">
                     <img id="LecturerPic" class='LecturerTabPageImg' src='' />
-                    <div id="LecturerNameInput" class="LecturerName" contenteditable="true"></div>
-                    <div id="LecturerJobInput" class="LecturerJob" contenteditable="true"></div>
-                    <textarea id="LecturerSummaryText" class="LecturerTabPageSummary"></textarea>
-                    <input class="" type="file" id="LecturerPhotoInput" name="lecturerPhotoInput" accept="image/jpeg"/>
+                    <div id="LecturerNameInput" class="LecturerName" contenteditable="true" placeholder="请填写姓名"></div>
+                    <div id="LecturerJobInput" class="LecturerJob" contenteditable="true" placeholder="请填写职务"></div>
+                    <textarea id="LecturerSummaryText" class="LecturerTabPageSummary" placeholder="请填写简介"></textarea>
+                    <input class="" type="file" id="LecturerPhotoInput" name="lecturerPhotoInput" accept="image/jpeg" placeholder="请选择讲师图片，只接受jpg文件"/>
                     <!--<button class="btn btn-primary btn-sm" type="button" onclick="UploadLecturerPhoto();">上传照片</button>-->
                 </div>
             </div>
@@ -1358,6 +1542,7 @@
         <div id="SaveDataState" ></div>-->
         <div class="btn-group btn-group-sm pull-right">
                 <button id="SaveDataBtn" type="button" class="btn btn-primary" onclick="$.SaveJsonData('savebtn')">保存</button>
+                <button id="PassBtn" type="button" class="btn btn-primary">测试</button>
                 <button id="" type="button" class="btn btn-primary" onclick="$.RestoreJsonData()">还原文稿</button>
                 <button id="" type="button" class="btn btn-primary" onclick="$.EditInfo()">编辑属性</button>
         </div>

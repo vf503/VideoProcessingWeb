@@ -1,6 +1,7 @@
 from rest_framework import serializers 
 from app import models
 from django.contrib.auth.models import User
+from app.CustomClass import CommonMethod
 
 class CourseSerializer(serializers.ModelSerializer):
     lecturer_name = serializers.CharField(source='lecturer.name')
@@ -15,7 +16,7 @@ class CourseSerializer(serializers.ModelSerializer):
         fields = ('CourseId', 'title', 'CreateDate', 'FilePath', 'progress', 'lecturer_name', 'GroupName','type','TempletType','creator','progress','FilePath','duration','SourceCourseId')
     
     def get_creator(self, obj):
-        return obj.creator.first_name + obj.creator.last_name
+        return obj.creator.first_name
     def get_CreateDate(self, obj):
         return obj.CreateDate.strftime('%Y-%m-%d')
     def get_type(self, obj):
@@ -38,9 +39,16 @@ class CourseSerializer(serializers.ModelSerializer):
 
 
 class EditTaskSerializer(serializers.ModelSerializer):
+    creator = serializers.SerializerMethodField()
+    CreateDate = serializers.SerializerMethodField()
     class Meta:
         model = models.EditTask
         fields = ('id','course','TaskType','creator','CreateDate','TaskState','FinishedDate','TaskNote','ExtendedData')
+    def get_creator(self, obj):
+        return obj.creator.first_name
+    def get_CreateDate(self, obj):
+        thistime = CommonMethod.utc2local(obj.CreateDate)
+        return thistime.strftime('%Y-%m-%d %H:%M:%S')
 
 class CourseTempletSerializer(serializers.ModelSerializer):
     class Meta:

@@ -5,7 +5,7 @@ Definition of views.
 from django.shortcuts import render
 from django.http import HttpRequest
 from django.template import RequestContext
-from datetime import datetime
+from datetime import datetime,timedelta
 
 import os
 import ntpath
@@ -33,7 +33,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User 
 from django.views.decorators.csrf import csrf_exempt,csrf_protect
 from VideoProcessingWeb.settings import STATIC_ROOT
-from VideoProcessingWeb.settings import COURSE_ROOT
+from VideoProcessingWeb.settings import COURSE_ROOT,COURSE_HTTP_ROOT,UPLOADTEMP_ROOT,COURSEUPLOAD_URL
 from VideoProcessingWeb.settings import COURSE_TEMP
 from VideoProcessingWeb.settings import COURSE_URL
 from VideoProcessingWeb.settings import LECTURER_ROOT
@@ -43,6 +43,7 @@ from VideoProcessingWeb.settings import ProjectCollection_URL
 from django.db.models import Q
 import pymysql
 from django.http import FileResponse
+from urllib3 import encode_multipart_formdata
 #REST OP
 from rest_framework import viewsets, serializers, permissions,status
 from rest_framework.views import APIView
@@ -300,7 +301,8 @@ def FTPVideoUpload(request):
     SourcePath = COURSE_TEMP + ProjectId + '.mp4'
     #RipPath = COURSE_TEMP + ProjectId + '_s.mp4'
     #if not (os.path.exists(SourcePath) and os.path.exists(RipPath)):
-    if not (os.path.exists(SourcePath)):
+    #if not (os.path.exists(SourcePath)):
+    if 2==1:
         ret['error'] = 'File not found'
         return HttpResponse(json.dumps(ret))
     else:
@@ -313,20 +315,25 @@ def FTPVideoUpload(request):
         lecturer=urllib.parse.unquote(request.GET.get('lecturer'))  
         WorkType=request.GET.get('type')   
         path = COURSE_ROOT + CourseId[0:4] + '/' + CourseId + '/'
-        if not os.path.exists(path):
-            os.makedirs(path)
+        #if not os.path.exists(path):
+        #    os.makedirs(path)
         #目标存在时,shutil.move()报错    
-        if os.path.exists(path+'raw.mp4'):
-            os.remove(path+'raw.mp4')
-        if os.path.exists(path+'rip.mp4'):
-            os.remove(path+'rip.mp4')
-        shutil.move(SourcePath,path+'raw.mp4')
+        #if os.path.exists(path+'raw.mp4'):
+        #    os.remove(path+'raw.mp4')
+        #if os.path.exists(path+'rip.mp4'):
+        #    os.remove(path+'rip.mp4')
+        #shutil.move(SourcePath,path+'raw.mp4')
         #shutil.move(RipPath,path+'rip.mp4')
         #if (os.path.exists(path+'raw.mp4') and os.path.exists(path+'rip.mp4')):
-        if (os.path.exists(path+'raw.mp4')):
-            ret['status'] = '文件验证通过'
+        #if (os.path.exists(path+'raw.mp4')):
+        #    ret['status'] = '文件验证通过'
+        #文件移动 OP
+        uploaddata = {'ProjectId':ProjectId,'action':'CourseVideoMove','source':COURSE_TEMP,'target':CourseId[0:4] + '\\' + CourseId + '\\'}
+        uploadres = requests.post(COURSEUPLOAD_URL, data = uploaddata)
+        ret['status'] = uploadres.content.decode('utf8')  
+        #文件移动 ED
     #TYPE
-    if 1==1:
+    if uploadres.content.decode('utf8')  =='文件上传成功':
         #DATA OP
         if(models.course.objects.filter(CourseId=CourseId).count()==0):
             NewCourse = models.course(CourseId=CourseId,title=CourseTitle,FilePath='/'+ CourseId[0:4] + '/',note=lecturer,type=WorkType,ProjectId=ProjectId,progress='FileUploaded',creator=DBUser)
@@ -376,7 +383,7 @@ def PlayVideo(request):
         CurrentCourse = models.course.objects.filter(ProjectId=ProjectId)
         CourseId=CurrentCourse[0].CourseId
         TaskCount=models.EditTask.objects.filter(course=CurrentCourse[0],TaskType='STT').count()
-        path = COURSE_URL + CourseId[0:4] + '/' + CourseId + '/'
+        path = COURSE_HTTP_ROOT + CourseId[0:4] + '/' + CourseId + '/'
         return render(request,'app/PlayVideo.html',{'VideoFilePath' :path+'rip.mp4',
                                                     'RawVideoFilePath' :path+'raw.mp4',
                                                     'temvarIsTaskExists':TaskCount,
@@ -480,7 +487,7 @@ def SlideEdit(request):
     assert isinstance(request, HttpRequest)
     #Login OP
     if request.user.is_authenticated() == False: 
-        LoginStr = request.GET.get('link')
+        LoginStr = urllib.parse.unquote(request.GET.get('link'))
         if LoginStr:
             user=CommonMethod.LinkLogin(LoginStr)
             login(request,user)
@@ -494,7 +501,7 @@ def SlideEdit(request):
         id = request.GET.get('id')
         course = models.course.objects.get(CourseId=id)
     CourseId=course.CourseId
-    path = COURSE_URL + CourseId[0:4] + '/' + CourseId + '/'
+    path = COURSE_HTTP_ROOT + CourseId[0:4] + '/' + CourseId + '/'
     FilePath = COURSE_ROOT + CourseId[0:4] + '/' + CourseId + '/'
     SlideName=''
     if course.SlideVersion is None or course.SlideVersion=='':
@@ -521,45 +528,56 @@ def SlideEdit(request):
                 summary=collection.getElementsByTagName("Information1")[0].firstChild.data
                 summary=summary.replace("<![CDATA[","")
                 summary=summary.replace("]]>","")
+            ImgSrc=''    
+            if lecturers[i].PhotoSrc:
+                ImgSrc = '/LecturerFile/'+lecturers[i].PhotoSrc
             LecturerData.append({
                 'index':i,
                 'id': lecturers[i].LecturerId, 
                 'name': lecturers[i].name,
                 'job':lecturers[i].post,
-                'ImgSrc':'/LecturerFile/'+lecturers[i].PhotoSrc,
+                'ImgSrc':ImgSrc,
                 'summary':summary
             })
     thislecturer=course.lecturer
     ThisLecturerData=[]
     if  thislecturer:
+        ImgSrc=''
+        if thislecturer.PhotoSrc:
+            ImgSrc = '/LecturerFile/'+thislecturer.PhotoSrc
         ThisLecturerData.append({
                 'id': thislecturer.LecturerId, 
                 'name': thislecturer.name,
                 'job':thislecturer.post,
-                'ImgSrc':'/LecturerFile/'+thislecturer.PhotoSrc,
+                'ImgSrc':ImgSrc,
                 'summary':thislecturer.introduction
             })
-    with open(FilePath+'captions.json', 'r+', encoding='utf-8') as JsonText:
+    #with open(FilePath+'captions.json', 'r+', encoding='utf-8') as JsonText:
         #JsonDate = json.dumps(JsonText.read(),ensure_ascii=False)
-        JsonData = json.loads(JsonText.read()) 
-        return render(request,'app/SlideEdit.html',{'temvarCourseId':CourseId,
-                                                   'temvarJsonData':JsonData,
-                                                   'temvarDocPath' :'http://newpms.cei.cn/docs/p/PowerPointFrame.aspx?WOPISrc=http%3A%2F%2Fpmsdocs.cei.cn%3A666%2Fwopi%2Ffiles%2F'+SlideName+'.pptx%3Fuserid%3Dcc%26username%3Dchenchen&PowerPointView=EditView',
-                                                   #'ModeNaviLink':'/CourseUpload/?id='+CourseId+'&ProjectNo='+ProjectNo,
-                                                   'temvarCourseTitle':course.title,
-                                                   #'ModeNaviTitle':'属性编辑',
-                                                   'tempvarTextDownload':"http://newpms.cei.cn/fullTextDownload/?id="+CourseId,
-                                                   'tempvarSlideDownload':path+'slide0.zip',
-                                                   'tempvarCurrentSlideDownload':'/DocFile/'+SlideName+'.pptx',
-                                                   'tempvarTestDownload':path+'test.zip',
-                                                   'temvarAudioFilePath':path + CourseId +'.mp3',
-                                                   #'temvarVideoFilePath':path+'rip.mp4',
-                                                   'temvarJsonAbstractData':AbstractData,
-                                                   'temvarJsonLecturerData':LecturerData,
-                                                   'temvarThisLecturerData':ThisLecturerData,
-                                                   'temvarKeyWords':course.KeyWords
-                                                   })
-    return render(request,'app/SlideEdit.html')
+        #JsonData = json.loads(JsonText.read()) 
+    CaptionsRequest = requests.get(path + 'captions.json')
+    CaptionsRequest.encoding = 'utf-8'
+    JsonText=CaptionsRequest.text
+    if JsonText.startswith(u'\ufeff'):
+        JsonText = JsonText.encode('utf8')[3:].decode('utf8')
+    JsonData = json.loads(JsonText) 
+    return render(request,'app/SlideEdit.html',{'temvarCourseId':CourseId,
+                                                'temvarJsonData':JsonData,
+                                                'temvarDocPath' :'http://newpms.cei.cn/docs/p/PowerPointFrame.aspx?WOPISrc=http%3A%2F%2Fpmsdocs.cei.cn%3A666%2Fwopi%2Ffiles%2F'+SlideName+'.pptx%3Fuserid%3Dcc%26username%3Dchenchen&PowerPointView=EditView',
+                                                #'ModeNaviLink':'/CourseUpload/?id='+CourseId+'&ProjectNo='+ProjectNo,
+                                                'temvarCourseTitle':course.title,
+                                                #'ModeNaviTitle':'属性编辑',
+                                                'tempvarTextDownload':"http://newpms.cei.cn/FullTextDownloadTXT/?id="+CourseId,
+                                                'tempvarSlideDownload':path+'slide0.zip',
+                                                'tempvarCurrentSlideDownload':'/DocFile/'+SlideName+'.pptx',
+                                                'tempvarTestDownload':path+'test.zip',
+                                                'temvarAudioFilePath':path + CourseId +'.mp3',
+                                                #'temvarVideoFilePath':path+'rip.mp4',
+                                                'temvarJsonAbstractData':AbstractData,
+                                                'temvarJsonLecturerData':LecturerData,
+                                                'temvarThisLecturerData':ThisLecturerData,
+                                                'temvarKeyWords':course.KeyWords
+                                                })
 
 # VideoSegment
 def VideoSegment(request):
@@ -610,12 +628,8 @@ def SrtUpload(request):
     if request.method == 'POST':
         ret = {'SRT': False, 'Data': False,'P-RET':False,}
         CourseId = request.POST.get('courseId')
-        FileSrt = request.FILES.get('fileSrt')
-        #
-        path = COURSE_ROOT + CourseId[0:4] + '/' + CourseId + '/'
-        if not os.path.exists(path):
-            ret['SRT'] = 'Course path is not found'
-        #情景：制作前资料 OP
+         #情景：制作前资料 OP
+        """
         if (request.POST.get('mode')=='slide') and (os.path.splitext(FileSrt.name)[1] == '.zip'):
             DestinationFilePath = path + 'slide0'+os.path.splitext(FileSrt.name)[1]
             DestinationFile = open(DestinationFilePath, 'wb+')
@@ -627,7 +641,17 @@ def SrtUpload(request):
         if (request.POST.get('mode')=='slide') and (os.path.splitext(FileSrt.name)[1] != '.zip'):
             ret['SRT'] = '只接收ZIP文件,请重新上传'
             return HttpResponse(json.dumps(ret,ensure_ascii=False))  
-        #情景：制作前资料 ED
+        """
+        if request.POST.get('mode')=='slide':
+            ret['SRT'] = '上传成功'
+            ret['Data'] = CourseId
+            return HttpResponse(json.dumps(ret,ensure_ascii=False))   
+        #情景：制作前资料 ED 
+        FileSrt = request.FILES.get('fileSrt')
+        #
+        path = UPLOADTEMP_ROOT
+        if not os.path.exists(path):
+            ret['SRT'] = 'Course path is not found'
         if os.path.splitext(FileSrt.name)[1] != '.srt':
             ret['SRT'] = 'File is not SRT'
             return HttpResponse(json.dumps(ret))
@@ -636,21 +660,34 @@ def SrtUpload(request):
             ret['SRT'] = '请不要反复上传，如需修改请线下联系'
             return HttpResponse(json.dumps(ret,ensure_ascii=False))
         #1
-        DestinationFilePath = path + 'captions.srt'
+        DestinationFilePath = path + CourseId + '_captions.srt'
         DestinationFile = open(DestinationFilePath, 'wb+')
         for chunk in FileSrt.chunks():
             DestinationFile.write(chunk)
         DestinationFile.close()
         #1-2
-        srt_filename ='captions.srt'
-        out_filename ='captions.json'
+        srt_filename =CourseId +'_captions.srt'
+        out_filename =CourseId +'_captions.json'
         srt = open(path + srt_filename, 'rb').read()
         if srt[:3] == codecs.BOM_UTF8:  
             srt = srt[3:]               
         srt = srt.decode('utf-8')       
         parsed_srt = JsonSuite.parse_srt(srt)
         open(path + out_filename, 'wb+').write(json.dumps(parsed_srt, indent=2, sort_keys=True,ensure_ascii=False).encode('utf8')) 
-        ret['SRT'] = 'Success'
+        #%%1-3
+        uploaddata = {"name":"captions.srt"}
+        uploadfile={}
+        uploadfile['file']= ("captions.srt",open(path + srt_filename,'rb').read())
+        r_srt = requests.post(COURSEUPLOAD_URL+CourseId, data = uploaddata, files=uploadfile)
+        os.remove(path + srt_filename)
+        uploaddata = {"name":"captions.json"}
+        uploadfile={}
+        uploadfile['file']= ("captions.json",open(path + out_filename,'rb').read())
+        r_json = requests.post(COURSEUPLOAD_URL+CourseId, data = uploaddata, files=uploadfile)
+        os.remove(path + out_filename)
+        #%%1-3
+        if (json.loads(r_srt.text)[0]["Name"])and(json.loads(r_json.text)[0]["Name"]):
+            ret['SRT'] = 'Success'
         #Data OP
         CurrentCourse = models.course.objects.get(CourseId=CourseId)
          #工单进度 OP
@@ -675,6 +712,7 @@ def SrtUpload(request):
       return render(request, 'app/SrtUpload.html',{'CourseId':CourseId,
                                                     'CourseTitle':CourseItems[0].title,
                                                     'tempvarMode':mode,
+                                                    'tempvarId':CourseId,
                                                     })
 
 #JsonTaskList
@@ -798,13 +836,17 @@ def CourseUpload(request):
 # UpdateLecturer
 def UpdateLecturer(request):
     if request.method == 'POST':
-        ret = {'id': None, 'PicSrc': None}
+        ret = {'id': None, 'PicSrc': None,'res':None}
         job=request.POST.get("LecturerJobInput")
         summary=request.POST.get("LecturerSummaryText")
         name=request.POST.get("LecturerNameInput")
         id=request.POST.get("id")
+        if (not name) or (not summary) or (not job) :
+            ret['res']='信息未填写完整'
+            return HttpResponse(json.dumps(ret))
         if id:
             lecturer = models.lecturer.objects.get(LecturerId=id)
+            lecturer.name = name
             lecturer.post = job
             lecturer.introduction = summary
             lecturer.save()
@@ -826,11 +868,15 @@ def UpdateLecturer(request):
             lecturer.save()
             ret['PicSrc']= LECTURER_URL + id + os.path.splitext(file.name)[1]
         else:
-            ret['PicSrc']= LECTURER_URL + lecturer.PhotoSrc   
+            if lecturer.PhotoSrc:
+                ret['PicSrc']= LECTURER_URL + lecturer.PhotoSrc   
+            else:
+                ret['PicSrc']= ''  
         CourseId=request.POST.get("CourseId")
         CourseThis = models.course.objects.get(CourseId=CourseId)
         CourseThis.lecturer=lecturer
         CourseThis.save()
+        ret['res']='success'
         return HttpResponse(json.dumps(ret))
 
 # UpdateCourseAbstract
@@ -862,9 +908,17 @@ def SubCheck(request):
         id = ReqData['id']
         PageCount = ReqData['PageCount']
         ThisCourse = models.course.objects.get(CourseId=id)
-        FilePath = COURSE_ROOT + id[0:4] + '/' + id + '/'
-        with open(FilePath+'captions.json', 'r+', encoding='utf-8') as JsonText:
-            JsonData = json.loads(JsonText.read()) 
+        #FilePath = COURSE_ROOT + id[0:4] + '/' + id + '/'
+        path = COURSE_HTTP_ROOT + id[0:4] + '/' + id + '/'
+        CaptionsRequest = requests.get(path + 'captions.json')
+        CaptionsRequest.encoding = 'utf-8'
+        JsonText=CaptionsRequest.text
+        if JsonText.startswith(u'\ufeff'):
+            JsonText = JsonText.encode('utf8')[3:].decode('utf8')
+        JsonData = json.loads(JsonText) 
+        if JsonData:
+        #with open(FilePath+'captions.json', 'r+', encoding='utf-8') as JsonText:
+            #JsonData = json.loads(JsonText.read()) 
             PrePage=0
             for subitem in JsonData:
                 if subitem['type']=='SubItem':
@@ -884,7 +938,7 @@ def SubCheck(request):
             ret['res']='pass'
     return HttpResponse(json.dumps(ret))    
 
-# SaveTest
+# SaveTest 服务端 
 def SaveTestFile(request):
     if request.method == 'POST':
         ret = {'id': "None", 'Src': "None",'Text':""}
@@ -993,11 +1047,11 @@ def CourseMake(request):
             #shutil.copyfile(DOC_ROOT+id+'.pptx', COURSE_ROOT + id[0:4] + '/' + id + '/slide.pptx') 
             ThisCourse = models.course.objects.get(CourseId=id)
             #Copy Slide OP
-            if (ThisCourse.SlideVersion is None) or (ThisCourse.SlideVersion==''):
-                #shutil.copyfile可替换
-                shutil.copyfile(DOC_ROOT+id+'.pptx', COURSE_ROOT + id[0:4] + '/' + id + '/slide.pptx') 
-            else:
-                shutil.copyfile(DOC_ROOT + id +'_' + ThisCourse.SlideVersion + '.pptx', COURSE_ROOT + id[0:4] + '/' + id + '/slide.pptx') 
+            #if (ThisCourse.SlideVersion is None) or (ThisCourse.SlideVersion==''):
+            #    #shutil.copyfile可替换
+            #    shutil.copyfile(DOC_ROOT+id+'.pptx', COURSE_ROOT + id[0:4] + '/' + id + '/slide.pptx') 
+            #else:
+            #    shutil.copyfile(DOC_ROOT + id +'_' + ThisCourse.SlideVersion + '.pptx', COURSE_ROOT + id[0:4] + '/' + id + '/slide.pptx') 
             #Copy Slide ED    
             if (models.EditTask.objects.filter(course=ThisCourse,TaskType='CourseMake',TaskState='creating').count()>0):
                 result["state"]='请不要重复添加任务'
@@ -1023,28 +1077,43 @@ def FullTextDownloadTXT(request):
     assert isinstance(request, HttpRequest)
     id = request.GET.get('id')
     ThisCourse = models.course.objects.get(CourseId=id)
-    path = COURSE_ROOT + id[0:4] + '/' + id + '/data/'
+    #path = COURSE_ROOT + id[0:4] + '/' + id + '/data/'
+    #path = COURSE_ROOT + id[0:4] + '/' + id + '/'
+    path = COURSE_HTTP_ROOT + id[0:4] + '/' + id + '/'
+    CaptionsRequest = requests.get(path + 'captions.json')
+    CaptionsRequest.encoding = 'utf-8'
+    JsonData = json.loads(CaptionsRequest.text) 
+    '''
     with open(path+'captions.json', 'r+', encoding='utf-8') as JsonText:
         JsonContent = JsonText.read()
         if JsonContent.startswith(u'\ufeff'):
             JsonContent = JsonContent.encode('utf8')[3:].decode('utf8')
         JsonData = json.loads(JsonContent)
-        txtName = "FullText.txt"
-        f=open(path+txtName, "w",encoding='utf-8')
-        for item in JsonData:
-            if item['type'].startswith('TitleItem') :
-                f.write('\r\n' + '\r\n' + '      ' + item['content']+ '\r\n')
-            elif item['type']=='SubItem':
-                if item['IsBeginningOfParagraph'] == 'false' :
-                    f.write(item['content'])
-                else:
-                    f.write('\r\n'+ '      ' +item['content'])
-        f.close()
-    file=open(path + 'FullText.txt','rb')      
-    response =FileResponse(file)  
+        '''
+    txtName = id+"_FullText.txt"
+    f=open(UPLOADTEMP_ROOT+txtName, "w",encoding='utf-8')
+    for item in JsonData:
+        if item['type'].startswith('TitleItem') :
+            f.write('\r\n' + '\r\n' + '      ' + item['content']+ '\r\n')
+        elif item['type']=='SubItem':
+            if item['IsBeginningOfParagraph'] == 'false' :
+                f.write(item['content'])
+            else:
+                f.write('\r\n'+ '      ' +item['content'])
+    f.close()
+    uploaddata = {"name":"FullText.txt"}
+    uploadfile={}
+    uploadfile['file']= ("FullText.txt",open(UPLOADTEMP_ROOT + txtName,'rb').read())
+    r = requests.post(COURSEUPLOAD_URL+id, data = uploaddata, files=uploadfile)
+    os.remove(UPLOADTEMP_ROOT+txtName)
+    #file=open(path + 'FullText.txt','rb')      
+    #response =FileResponse(file)  
+    FullTextRequest = requests.get(path + 'FullText.txt')
+    FullTextRequest.encoding = 'utf-8'
+    response = HttpResponse(FullTextRequest.text)
     response['Content-Type']='application/octet-stream'  
     response['Content-Disposition']='attachment;filename="'+ id +'.txt"'  
-    return response     
+    return response  
 
 # FullTextDownload From Srt
 def FullTextDownloadFromSrt(request):
@@ -1075,10 +1144,10 @@ def JsonDataSave(request):
             mode = request.GET.get('mode')
             CourseId=request.GET.get('id')
             if mode=='auto':
-                TargetFile='captions_auto.json'
+                TargetFile=CourseId+'_captions_auto.json'
             else:
-                TargetFile='captions.json'
-            path = os.path.join(COURSE_ROOT, CourseId[0:4] + '/' + CourseId + '/')
+                TargetFile=CourseId+'_captions.json'
+            #path = os.path.join(COURSE_ROOT, CourseId[0:4] + '/' + CourseId + '/')
             #JsonData =  json.dumps(request.body, indent=2, sort_keys=True,ensure_ascii=False).encode('utf8')
             JsonData=str(request.body, encoding = "utf-8")
             #
@@ -1092,10 +1161,21 @@ def JsonDataSave(request):
             course.save()    
             #
             #ret['data'] = request.body
-            f = open(path+TargetFile,'w',encoding= 'utf8') #打开文件open()是file()的别名
+            f = open(UPLOADTEMP_ROOT+TargetFile,'w',encoding= 'utf8') #打开文件open()是file()的别名
             f.write(JsonData) #把字符串写入文件
             f.close() #关闭文件
-            ret['status'] = True                   
+            if mode=='auto':
+                uploaddata = {"name":"captions_auto.json"}
+                uploadfile={}
+                uploadfile['file']= ("captions_auto.json",open(UPLOADTEMP_ROOT+TargetFile,'rb').read())
+            else:
+                uploaddata = {"name":"captions.json"}
+                uploadfile={}
+                uploadfile['file']= ("captions.json",open(UPLOADTEMP_ROOT+TargetFile,'rb').read())
+            r_srt = requests.post(COURSEUPLOAD_URL+CourseId, data = uploaddata, files=uploadfile)
+            os.remove(UPLOADTEMP_ROOT+TargetFile)
+            if json.loads(r_srt.text)[0]["Name"] :
+                ret['status'] = True                   
             #
             return HttpResponse()
     else:
@@ -1106,16 +1186,29 @@ def JsonDataRestore(request):
     assert isinstance(request, HttpRequest)
     ret = {'status': False, 'data': None, 'error': None}
     if request.method == 'POST':
+            CourseId=request.GET.get('id')
+            '''
             path = os.path.join(COURSE_FILE_PATH, 'temp/')
             if os.path.exists(path + 'captions_auto.json'):
                 srt = open(path + 'captions_auto.json', 'rb').read()
                 if srt[:3] == codecs.BOM_UTF8:  
                     srt = srt[3:]               
                 srt = srt.decode('utf-8')  
-                f = open(path+'captions.json','w',encoding= 'utf8') #打开文件open()是file()的别名
-                f.write(srt) #把字符串写入文件
+            '''
+            path = COURSE_HTTP_ROOT + CourseId[0:4] + '/' + CourseId + '/'
+            CaptionsRequest = requests.get(path + 'captions_auto.json')
+            if CaptionsRequest:
+                CaptionsRequest.encoding = 'utf-8'
+                f = open(UPLOADTEMP_ROOT + CourseId+'captions.json', 'wb+') #打开文件open()是file()的别名
+                f.write(CaptionsRequest.text) #把字符串写入文件
                 f.close() #关闭文件
-                ret['status'] = True                   
+                uploaddata = {"name":"captions.json"}
+                uploadfile={}
+                uploadfile['file']= ("captions.json",open(UPLOADTEMP_ROOT+CourseId+'captions.json','rb').read())
+                r_srt = requests.post(COURSEUPLOAD_URL+CourseId, data = uploaddata, files=uploadfile)
+                if json.loads(r_srt.text)[0]["Name"] :
+                    os.remove(UPLOADTEMP_ROOT+CourseId+'captions.json')
+                    ret['status'] = True                   
             else:
                 ret['status'] = 'no file'   
             return HttpResponse(ret)
@@ -1169,7 +1262,7 @@ def OldCourseQuery(request):
     # 使用cursor()方法获取操作游标  
     cursor = db.cursor() 
     # SQL 查询语句 
-    sql = "SELECT Id ,Theme,Themegroup,Speaker,Speakerinfo,Format,Date,'旧课件' as DataType,Sourse,Producer,Mark,Duration FROM course where Theme like '%" \
+    sql = "SELECT Id ,Theme,Themegroup,Speaker,Speakerinfo,Format,Onloadtime,'旧课件' as DataType,Sourse,Producer,Mark,Duration FROM course where Theme like '%" \
     + QueryTitle + "%' and Speaker like '%" + QueryLecturer + "%' and KeyWords like '%" + QueryKey + "%' and Sourse like '%" + QuerySource +"%' and Format like '%" + QueryType + "%' order by Date desc,Theme asc"
     #return HttpResponse(sql)
     try: 
@@ -1229,7 +1322,7 @@ def OldCourseQueryExacted(request):
     # 使用cursor()方法获取操作游标  
     cursor = db.cursor() 
     # SQL 查询语句 
-    sql = "SELECT Id,Theme,Themegroup,Speaker,Speakerinfo,Format,Date,'旧课件' as DataType,Sourse,Producer as creator,Duration as duration,Mark,Duration FROM course where " + SQLField + " = '"  + QueryVal + "' order by Date desc,Theme asc limit 1"
+    sql = "SELECT Id,Theme,Themegroup,Speaker,Speakerinfo,Format,Onloadtime,'旧课件' as DataType,Sourse,Producer as creator,Duration as duration,Mark,Duration FROM course where " + SQLField + " = '"  + QueryVal + "' order by Date desc,Theme asc limit 1"
     #return HttpResponse(sql)
     try: 
     # 执行SQL语句 
@@ -1343,7 +1436,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         #
         ThisHeaders={'Access-Control-Allow-Origin':'*'}
         #
-        courses = models.course.objects.filter((~Q(SourceCourseId=None) & Q(progress=None)) | Q(EpisodeCount=1,progress='made')) 
+        courses = models.course.objects.filter((~Q(SourceCourseId=None) & Q(progress=None)) | Q(EpisodeCount=1,progress='made'))
         serializer = RestSerializers.CourseSerializer(courses, many=True) 
         return Response(serializer.data,headers=ThisHeaders)
     @list_route()
@@ -1436,8 +1529,23 @@ def EditTask_list(request):
 class EditTaskList(APIView):
     permission_classes = (permissions.IsAuthenticated,) #,结尾必须有
     #authentication_classes = (CsrfExemptSessionAuthentication, TokenAuthentication)
-    def get(self, request, format=None):
-        EditTasks = models.EditTask.objects.all()
+    #def get(self, request, userid,format=None):
+    def get(self, request,format=None):
+        userid = request.GET.get('userid')
+        type = request.GET.get('mode')
+        if type =='all':
+            EditTasks = models.EditTask.objects.all()
+            serializer = RestSerializers.EditTaskSerializer(EditTasks, many=True)
+        elif  type =='waiting':
+            EditTasks = models.EditTask.objects.filter(~Q(TaskState='Finished') & ~Q(TaskState='Error') & ~Q(TaskState='WaitingToUploadSrt')).order_by('CreateDate')
+        elif type =='own':
+            user = User.objects.get(username=userid)
+            now = datetime.now()
+            #前一天
+            start = now - timedelta(days=30)
+            EditTasks = models.EditTask.objects.filter(Q(creator=user.id) & Q(CreateDate__gt=start)).order_by('-CreateDate')[:30]
+        else :
+            return Response('')
         serializer = RestSerializers.EditTaskSerializer(EditTasks, many=True)
         return Response(serializer.data)
     def post(self, request, format=None):
@@ -1457,7 +1565,9 @@ class EditTaskList(APIView):
             CourseId = data['course'][0]
             ThisCourse = models.course.objects.filter(CourseId=CourseId)
             if (models.EditTask.objects.filter(course=ThisCourse,TaskType=data['TaskType'],TaskState='WaitingToBegin').count()>0) and (data['TaskType']!='CourseDownload'):
-                return Response("Task Repetition", status=status.HTTP_204_NO_CONTENT)     
+                #只能判断一个课，暂时不做处理 
+                CourseId=CourseId
+                #return Response("Task Repetition", status=status.HTTP_204_NO_CONTENT)     
             else:
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)

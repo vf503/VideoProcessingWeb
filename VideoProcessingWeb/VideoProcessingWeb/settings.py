@@ -137,15 +137,6 @@ STATIC_URL = '/static/'
 
 STATIC_ROOT = posixpath.join(*(BASE_DIR.split(os.path.sep) + ['static']))
 
-COURSE_URL = '/CourseFile/'
-#COURSE_ROOT = r'//203.207.118.112/CourseFile/'
-#COURSE_ROOT = posixpath.join(*os.path.splitdrive('//203.207.118.112//CourseFile//'))
-COURSE_ROOT = '\\\\203.207.118.112\\CourseFile\\'
-COURSE_TEMP = '\\\\203.207.118.112\\CourseFile\\TempUpload\\'
-LECTURER_ROOT = 'D:/WebSite/LecturerFile/'
-LECTURER_URL = '/LecturerFile/'
-DOC_ROOT = '\\\\203.207.197.17\\OfficeDocs\\'
-
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
@@ -166,6 +157,17 @@ JWT_AUTH = {
 
 
 # 自定义部分
+COURSE_URL = '/CourseFile/'
+#COURSE_ROOT = r'//203.207.118.112/CourseFile/'
+#COURSE_ROOT = posixpath.join(*os.path.splitdrive('//203.207.118.112//CourseFile//'))
+COURSE_ROOT = '\\\\203.207.118.112\\CourseFile\\'
+COURSE_HTTP_ROOT = 'http://203.207.118.112/CourseFile/'
+COURSE_TEMP = 'TempUpload\\'
+LECTURER_ROOT = 'D:/WebSite/LecturerFile/'
+LECTURER_URL = '/LecturerFile/'
+DOC_ROOT = '\\\\203.207.197.17\\OfficeDocs\\'
+UPLOADTEMP_ROOT='D:/WebSite/UploadTemp/'
+COURSEUPLOAD_URL='http://203.207.118.112/api/files/'
 LOGIN_URL = '/login/'
 ProjectCollection_URL='http://pms.cei.com.cn/'
 

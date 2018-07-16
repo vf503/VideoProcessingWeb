@@ -5,20 +5,89 @@
 <h2>{{ title }}.</h2>
 <h3>{{ message }}</h3>
 {% load staticfiles %}
+<style>
+    #log{
+        color:darkgreen;
+    }
+</style>
 <script>
 var mode="{{tempvarMode}}";
+var id="{{tempvarId}}"
+function upload() {
+    if(mode=="slide"){
+        var myfile = document.getElementById('FileSrt');
+        var filevalue = myfile.value;
+        var index = filevalue.lastIndexOf('.');
+        var mydate = new Date();
+        if(myfile.files[0] == undefined){
+            $("#log").append("<div>系统反馈："+mydate.toLocaleString()+"__未选择文件</div>"); 
+            return false;
+        }
+        else if (filevalue.substring(index)!=".zip") {
+            $("#log").append("<div>系统反馈："+mydate.toLocaleString()+"__只接受zip文件</div>"); 
+            return false;
+        }
+        else {
+        //
+        $("#log").append("<div>系统反馈："+mydate.toLocaleString()+"__"+name+"开始上传，请等待结果</div>"); 
+        var form = new FormData(); 
+        form.append("",$("#FileSrt")[0].files[0]);
+        form.append("name","slide0.zip");
+        //Ajax提交
+        $.ajax({
+            url: "http://203.207.118.112/api/files/"+id,
+            type: "POST",
+            data: form,
+            async: true,         //异步
+            processData: false,  //很重要，告诉jquery不要对form进行处理
+            contentType: false,  //很重要，指定为false才能形成正确的Content-Type
+            //timeout: 30000000, //超时时间：30秒
+            success: function (result) {
+                //r=JSON.parse(result);
+                //var name=r['Name'];
+                //
+                var form = new FormData(); 
+                form.append("mode",$("#mode").val());
+                form.append("courseId",$("#CourseId").val());
+                $.ajax({
+                    url: "/SrtUpload/",
+                    type: "POST",
+                    data: form,
+                    async: false,         //异步
+                    processData: false,  //很重要，告诉jquery不要对form进行处理
+                    contentType: false,  //很重要，指定为false才能形成正确的Content-Type
+                    //timeout: 30000000, //超时时间：30秒
+                    success: function (result) {
+                        r=JSON.parse(result);
+                        //var name=r['Name'];
+                        //
+                        mydate = new Date();
+                        $("#log").append("<div>系统反馈："+mydate.toLocaleString()+"__"+r["Data"]+"上传成功,可以关闭页面</div>"); 
+                        //
+                        return false;
+                    }
+                });
+            }
+        });
+        }    
+    }
+    else{
+        document.getElementById("mainForm").submit();
+    }
+}
+
 $(document).ready(function () {
     if(mode=="slide"){
         $("#mode").val("slide");
-        $("#SubmitBtn").val("上传幻灯片");
+        $("#SubmitBtn").val("上传资料");
     }
     else{
         
     }
 });
 </script>
-
-    <form class="form-horizontal" enctype="multipart/form-data" method="POST" action="/SrtUpload/" >
+    <div id="log"></div>
+    <form id="mainForm" class="form-horizontal" enctype="multipart/form-data" method="POST" action="/SrtUpload/">
         {% csrf_token %}
         <label class="col-md-2 control-label" for="CourseId">编号：</label>
         <input class="col-md-6 form-control" type="text" value="{{ CourseId }}" id="CourseId" name="courseId" />
@@ -28,7 +97,7 @@ $(document).ready(function () {
         <label class="col-md-2 control-label" for="fileSrt">选择文件：</label>
         <input class="col-md-4 form-control" type="file" id="FileSrt" name="fileSrt"/>
         <br/>
-        <input type="submit" id="SubmitBtn" class="btn btn-default" value="上传字幕" />
+        <input type="button" id="SubmitBtn" class="btn btn-default" value="上传字幕" onclick="upload()"/>
         <input type="text" id="mode" name="mode" value="srt" hidden="hidden"/>
     </form>
 
