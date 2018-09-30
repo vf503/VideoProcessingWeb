@@ -31,30 +31,34 @@ urlpatterns = [
     url(r'^$', app.views.MyTask, name='home'),
     url(r'^contact$', app.views.contact, name='contact'),
     url(r'^about', app.views.about, name='about'),
-    url(r'^login/$',
-        django.contrib.auth.views.login,
-        {
-            'template_name': 'app/login.html',
-            'authentication_form': app.forms.BootstrapAuthenticationForm,
-            'extra_context':
-            {
-                'title': 'Log in',
-                'year': datetime.now().year,
-            }
-        },
-        name='login'),
-    url(r'^logout$',
-        django.contrib.auth.views.logout,
-        {
-            'next_page': '/',
-        },
-        name='logout'),
+    #url('^', include('django.contrib.auth.urls')),
+    url(r'^login/$', django.contrib.auth.views.LoginView.as_view(template_name='app/login.html'), name='login'),
+    url(r'^logout$', django.contrib.auth.views.LogoutView.as_view(next_page='/'), name='logout'),
+    #url(r'^login/$',
+    #    django.contrib.auth.views.login,
+    #    {
+    #        'template_name': 'app/login.html',
+    #        'authentication_form': app.forms.BootstrapAuthenticationForm,
+    #        'extra_context':
+    #        {
+    #            'title': 'Log in',
+    #            'year': datetime.now().year,
+    #        }
+    #    },
+    #    name='login'),
+    #url(r'^logout$',
+    #    django.contrib.auth.views.logout,
+    #    {
+    #        'next_page': '/',
+    #    },
+    #    name='logout'), 
 
     # Uncomment the admin/doc line below to enable admin documentation:
-    url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
+    #url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 
     # Uncomment the next line to enable the admin:
-    url(r'^admin/', include(admin.site.urls)),
+    #url(r'^admin/', include(admin.site.urls)),
+    url(r'^admin/', admin.site.urls),
 
     url(r'^VideoUpload',app.views.VideoUpload,name='Route_VideoUpload'),
     url(r'^FTPVideoUpload/$',app.views.FTPVideoUpload,name='Route_FTPVideoUpload'),
@@ -82,6 +86,7 @@ urlpatterns = [
     url(r'^SubCheck/$',app.views.SubCheck,name='Route_SubCheck'),
     url(r'^FullTextDownloadTXT/$',app.views.FullTextDownloadTXT,name='Route_FullTextDownloadTXT'),
     url(r'^FullTextDownloadFromSrt/$',app.views.FullTextDownloadFromSrt,name='Route_FullTextDownloadFromSrt'),
+    url(r'^SRTDownload/$',app.views.SRTDownload,name='Route_SRTDownload'),
     #
     url(r'^JsonLogin/$',app.views.JsonLogin,name='Route_JsonLogin'),
     url(r'^JsonTaskList/$',app.views.JsonTaskList,name='Route_JsonTaskList'),
@@ -93,10 +98,12 @@ urlpatterns = [
     url(r'^OldCourseQueryExacted/$',app.views.OldCourseQueryExacted,name='Route_OldCourseQueryExacted'),
     url(r'^ApiLogin/$',app.views.ApiLogin,name='Route_ApiLogin'),
     #REST
+    #url(r'^', include(RestRouter.urls)),
     url(r'^', include(RestRouter.urls)),
     #url(r'^edittask/$', app.views.EditTask_list),
     #url(r'^edittask/(?P<userid>[\s\S]*)/$', app.views.EditTaskList.as_view()),
     url(r'^edittask/$', app.views.EditTaskList.as_view()),
+    url(r'^edittaskdetail/$', app.views.EditTaskDetail.as_view()),
     url(r'^coursetemplet/$', app.views.CourseTempletList.as_view()),
     url(r'^api-token-auth/', obtain_jwt_token),
 

@@ -46,14 +46,14 @@ INSTALLED_APPS = [
     'corsheaders'
 ]
 
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
+    #'django.contrib.auth.middleware.SessionAuthenticationMiddleware', #2.1 don`t need more.
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware'
 ]
@@ -92,7 +92,7 @@ DATABASES = {
         'NAME':'VideoProcessing',#数据库名字
         'USER':'postgres',#登录用户名
         'PASSWORD':'chenchen',
-        'HOST':'127.0.0.1',#数据库IP地址
+        'HOST':'192.168.194.64',#数据库IP地址
         'PORT':'5432',
         }
 }
@@ -147,8 +147,8 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+        #'rest_framework.authentication.SessionAuthentication',
+        #'rest_framework.authentication.BasicAuthentication',
     )
 }
 JWT_AUTH = {

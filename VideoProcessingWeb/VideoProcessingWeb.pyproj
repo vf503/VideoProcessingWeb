@@ -36,6 +36,9 @@
     <Compile Include="app\CustomClass\JsonSuite.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="app\CustomClass\ModelsFields.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="app\CustomClass\RestSerializers.py">
       <SubType>Code</SubType>
     </Compile>

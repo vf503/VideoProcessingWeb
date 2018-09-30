@@ -7,6 +7,8 @@ from datetime import datetime
 from django.utils import timezone
 from django.core.validators import MaxValueValidator
 from django.contrib.auth.models import User 
+#from app.CustomClass import ModelsFields
+from django_pgjsonb import JSONField
 
 # Create your models here.
 
@@ -14,33 +16,35 @@ class course(models.Model):
     CourseId=models.CharField(max_length=100,primary_key=True)
     title=models.CharField(max_length=200)
     GroupName=models.CharField(max_length=200,null=True)
-    creator= models.ForeignKey(User,default="1")
+    creator= models.ForeignKey(User,on_delete=models.CASCADE)
     CreateDate=models.DateTimeField(default=timezone.now())
+    MakeDate=models.DateTimeField(null=True)
     ProjectId=models.CharField(max_length=100,null=True)
     FilePath=models.CharField(max_length=1024,null=True)
     SlideVersion=models.CharField(max_length=100,null=True)
     type=models.CharField(max_length=100,null=True)
     TempletType=models.CharField(max_length=100,default="slide")
     duration=models.IntegerField(null=True)
-    SourceCourseId=models.ForeignKey("course",null=True)
+    SourceCourseId=models.ForeignKey("course",null=True,on_delete=models.CASCADE)
     EpisodeCount=models.IntegerField(null=True)
-    lecturer=models.ForeignKey("lecturer",null=True)
+    lecturer=models.ForeignKey("lecturer",null=True,on_delete=models.CASCADE)
     PublishCategory = models.ManyToManyField("PublishCategory") 
     InternalCategory = models.ManyToManyField("InternalCategory") 
     progress=models.CharField(max_length=100,null=True)
     KeyWords=models.CharField(max_length=1024,null=True)
     note=models.CharField(max_length=200,null=True)
-    ExtendedData=models.CharField(max_length=2048,null=True)
+    ExtendedData = JSONField(null=True)
+    subtitles = JSONField(null=True)
 
 class CourseLog(models.Model):
-    course = models.ForeignKey("course",null=True)
-    user=models.ForeignKey(User)
+    course = models.ForeignKey("course",null=True,on_delete=models.CASCADE)
+    user=models.ForeignKey(User,on_delete=models.CASCADE)
     type=models.CharField(max_length=100)
     date=models.DateTimeField(default=timezone.now())
-    note=models.CharField(max_length=200,null=True)
+    log = JSONField(null=True)
 
 class CourseAbstract(models.Model):
-    course=models.ForeignKey(course)
+    course=models.ForeignKey("course",on_delete=models.CASCADE)
     index=models.IntegerField(validators=[MaxValueValidator(50)])
     Text=models.CharField(max_length=2048,null=True)
     class Meta:
@@ -50,7 +54,7 @@ class CourseAbstract(models.Model):
 class InternalCategory(models.Model):
     InternalCategoryId=models.CharField(max_length=100,primary_key=True)
     name=models.CharField(max_length=200)
-    parent=models.ForeignKey("InternalCategory",null=True)
+    parent=models.ForeignKey("InternalCategory",null=True,on_delete=models.CASCADE)
     path=models.CharField(max_length=1024,null=True)
     note=models.CharField(max_length=200,null=True)
 
@@ -73,7 +77,7 @@ class EditTask(models.Model):
     course=models.ManyToManyField(course)
     TaskType=models.CharField(max_length=100)
     TaskPriority=models.CharField(max_length=100,default="A")
-    creator= models.ForeignKey(User,default="1")
+    creator= models.ForeignKey(User,on_delete=models.CASCADE)
     #CreateDate=models.DateTimeField(auto_now=True)#更新其他列，此列时间自动更新
     #CreateDate=models.DateTimeField(default=timezone.now())#时间不即时更新
     CreateDate=models.DateTimeField(auto_now_add=True)#
@@ -91,9 +95,8 @@ class customer(models.Model):
 
 class CourseTemplet(models.Model):
     name=models.CharField(max_length=100)
-    customer=models.ForeignKey("customer",null=True)
+    customer=models.ForeignKey("customer",null=True,on_delete=models.CASCADE)
     FilePath=models.CharField(max_length=1024)
     note=models.CharField(max_length=500)
-
 
 
