@@ -62,6 +62,7 @@ urlpatterns = [
 
     url(r'^VideoUpload',app.views.VideoUpload,name='Route_VideoUpload'),
     url(r'^FTPVideoUpload/$',app.views.FTPVideoUpload,name='Route_FTPVideoUpload'),
+    url(r'^DownloadAudioPack/$',app.views.DownloadAudioPack,name='Route_DownloadAudioPack'),
     url(r'^PlayVideo',app.views.PlayVideo,name='Route_PlayVideo'),
     url(r'^AjaxVideoUploadPage/$', app.views.AjaxVideoUploadPage,name='Route_AjaxVideoUploadPage'),  
     url(r'^AjaxVideoUpload/$', app.views.AjaxVideoUpload,name='Route_AjaxVideoUpload'),
@@ -71,6 +72,7 @@ urlpatterns = [
     url(r'^STTEdit/$',app.views.STTEdit,name='Route_STTEdit'),
     url(r'^CaptionsEdit/$',app.views.CaptionsEdit,name='Route_CaptionsEdit'),
     url(r'^SlideEdit/$',app.views.SlideEdit,name='Route_SlideEdit'),
+    url(r'^SlideReEdit/$',app.views.SlideReEdit,name='Route_SlideReEdit'),
     url(r'^VideoSegmentList',app.views.VideoSegmentList,name='Route_VideoSegmentList'),
     url(r'^VideoSegment$',app.views.VideoSegment,name='Route_VideoSegment'),
     url(r'^VideoSegment/$',app.views.VideoSegment,name='Route_VideoSegment'),
@@ -79,6 +81,7 @@ urlpatterns = [
     url(r'^UpdateLecturer/$',app.views.UpdateLecturer,name='Route_UpdateLecturer'),
     url(r'^SaveTestFile/$',app.views.SaveTestFile,name='Route_SaveTestFile'),
     url(r'^SlideUpload/$',app.views.SlideUpload,name='Route_SlideUpload'),
+    url(r'^SlideReUpload/$',app.views.SlideReUpload,name='Route_SlideReUpload'),
     url(r'^CourseMake/$',app.views.CourseMake,name='Route_CourseMake'),
     url(r'^UpdateCourseAbstract/$',app.views.UpdateCourseAbstract,name='Route_UpdateCourseAbstract'),
     url(r'^CourseQuery/$',app.views.CourseQuery,name='Route_CourseQuery'),
@@ -87,11 +90,13 @@ urlpatterns = [
     url(r'^FullTextDownloadTXT/$',app.views.FullTextDownloadTXT,name='Route_FullTextDownloadTXT'),
     url(r'^FullTextDownloadFromSrt/$',app.views.FullTextDownloadFromSrt,name='Route_FullTextDownloadFromSrt'),
     url(r'^SRTDownload/$',app.views.SRTDownload,name='Route_SRTDownload'),
+    url(r'^LineTextDownload/$',app.views.LineTextDownload,name='Route_LineTextDownload'),
     #
     url(r'^JsonLogin/$',app.views.JsonLogin,name='Route_JsonLogin'),
     url(r'^JsonTaskList/$',app.views.JsonTaskList,name='Route_JsonTaskList'),
     url(r'^JsonCourseList/$',app.views.JsonCourseList,name='Route_JsonCourseList'),
     url(r'^JsonDataSave/$',app.views.JsonDataSave,name='Route_JsonDataSave'),
+    url(r'^JsonDataSaveReEdit/$',app.views.JsonDataSaveReEdit,name='Route_JsonDataSaveReEdit'),
     url(r'^JsonDataRestore/$',app.views.JsonDataRestore,name='Route_JsonDataRestore'),
     url(r'^JsonCourseAbstractUpdate/$',app.views.JsonCourseAbstractUpdate,name='Route_JsonCourseAbstractUpdate'),
     url(r'^OldCourseQuery/$',app.views.OldCourseQuery,name='Route_OldCourseQuery'),
@@ -105,6 +110,7 @@ urlpatterns = [
     url(r'^edittask/$', app.views.EditTaskList.as_view()),
     url(r'^edittaskdetail/$', app.views.EditTaskDetail.as_view()),
     url(r'^coursetemplet/$', app.views.CourseTempletList.as_view()),
+    url(r'^customer/$', app.views.CustomerList.as_view()),
     url(r'^api-token-auth/', obtain_jwt_token),
 
 ] + static(settings.STATIC_URL, document_root = settings.STATIC_ROOT) + static(settings.COURSE_URL,document_root=settings.COURSE_ROOT)

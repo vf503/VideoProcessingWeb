@@ -8,6 +8,7 @@ from django.template import RequestContext
 from datetime import datetime,timedelta
 
 import os
+import zipfile
 import ntpath
 import re
 import time
@@ -34,7 +35,7 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt,csrf_protect
 from VideoProcessingWeb.settings import STATIC_ROOT
 from VideoProcessingWeb.settings import COURSE_ROOT,COURSE_HTTP_ROOT,UPLOADTEMP_ROOT,COURSEUPLOAD_URL
-from VideoProcessingWeb.settings import COURSE_TEMP
+from VideoProcessingWeb.settings import COURSE_TEMP,COURSE_TEMP_LOCAL,AUDIO_TEMP_LOCAL
 from VideoProcessingWeb.settings import COURSE_URL
 from VideoProcessingWeb.settings import LECTURER_ROOT
 from VideoProcessingWeb.settings import LECTURER_URL
@@ -187,7 +188,7 @@ def AjaxVideoUpload(request):
 def FTPVideoUpload_backup(request):
     assert isinstance(request, HttpRequest)
     #Login OP
-    if request.user.is_authenticated():
+    if request.user.is_authenticated == True:
         # Do something for authenticated users.
         CurrentUser=request.user.username
     else: 
@@ -282,7 +283,7 @@ def FTPVideoUpload_backup(request):
 def FTPVideoUpload(request):
     assert isinstance(request, HttpRequest)
     #Login OP
-    if request.user.is_authenticated():
+    if request.user.is_authenticated == True:
         # Do something for authenticated users.
         CurrentUser=request.user.username
         DBUser=User.objects.get(username=CurrentUser) 
@@ -328,6 +329,25 @@ def FTPVideoUpload(request):
         #if (os.path.exists(path+'raw.mp4')):
         #    ret['status'] = '文件验证通过'
         #文件移动 OP
+        if WorkType=='NoSlideAudio': 
+            SourcePath = AUDIO_TEMP_LOCAL + ProjectId + '.mp3'
+            if os.path.exists(SourcePath):
+                ret['status'] = '文件完备'
+                if(models.course.objects.filter(CourseId=CourseId).count()==0):
+                    NewCourse = models.course(CourseId=CourseId,title=CourseTitle,FilePath='/'+ CourseId[0:4] + '/',note=lecturer,type=ProjectId[0:1].lower(),TempletType='NoSlide',ProjectId=ProjectId,progress='AudioUploaded',EpisodeCount=1,creator=DBUser,ExtendedData='')
+                    NewCourse.save() 
+                    ret['data'] = '数据添加成功'
+                    return HttpResponse(json.dumps(ret,ensure_ascii=False)) 
+            return HttpResponse(json.dumps(ret,ensure_ascii=False))
+        elif WorkType=='NoSlideVideo': 
+            uploaddata = {'ProjectId':ProjectId,'action':'CourseVideoMove','source':COURSE_TEMP,'target':CourseId[0:4] + '\\' + CourseId + '\\'}
+            uploadres = requests.post(COURSEUPLOAD_URL, data = uploaddata)
+            UploadRet =json.loads(uploadres.content.decode('utf8'))
+            ret['status'] = uploadres.content.decode('utf8')
+            if UploadRet['video']=='1' and UploadRet['pic']=='1':
+                ret['status'] = '文件完备' 
+                return HttpResponse(json.dumps(ret,ensure_ascii=False)) 
+            return HttpResponse(json.dumps(ret,ensure_ascii=False))
         uploaddata = {'ProjectId':ProjectId,'action':'CourseVideoMove','source':COURSE_TEMP,'target':CourseId[0:4] + '\\' + CourseId + '\\'}
         uploadres = requests.post(COURSEUPLOAD_URL, data = uploaddata)
         UploadRet =json.loads(uploadres.content.decode('utf8'))
@@ -362,12 +382,55 @@ def FTPVideoUpload(request):
         #缺少图片时  有文件夹没有对应数据 重传时 注意删除旧文件夹
         ret['status'] = '缺少视频文件或图片文件'  
     return HttpResponse(json.dumps(ret,ensure_ascii=False))
-  
+
+#DownloadAudio
+@csrf_exempt 
+def DownloadAudioPack(request):
+    assert isinstance(request, HttpRequest)
+    #Login OP
+    if request.user.is_authenticated == True:
+        # Do something for authenticated users.
+        CurrentUser=request.user.username
+        DBUser=User.objects.get(username=CurrentUser) 
+    else: 
+        # Do something for anonymous users.
+        LoginStr = request.GET.get('link')
+        if CommonMethod.LinkLogin(LoginStr)!=False:
+            user=CommonMethod.LinkLogin(LoginStr)
+            login(request,user)
+            DBUser=User.objects.get(username=user.username) 
+        else:    
+            return HttpResponseRedirect('/login')   
+    #Login ED
+    ret = {'status': False, 'data': None, 'name': None,'error': None}
+    if request.method == 'POST':
+        ReqData=json.loads(request.body)
+        filelist = []
+        for item in ReqData:
+            if os.path.exists(AUDIO_TEMP_LOCAL + item + '.mp3'):
+                filelist.append(AUDIO_TEMP_LOCAL + item + '.mp3')
+        #zipfilename=AUDIO_TEMP_LOCAL + request.user.username+time.strftime('%Y%m%d%H%M%S')+'.zip'
+        zipfilename='D:/WebSite/AudioFile/' + time.strftime('%Y%m%d%H%M%S')+'_'+request.user.username +'.zip'
+        zf = zipfile.ZipFile(zipfilename,"w")
+        pre_len = len(os.path.dirname(AUDIO_TEMP_LOCAL))
+        prename_len = len(os.path.dirname('D:/WebSite/AudioFile/'))+1
+        for file in filelist:
+            arcname = file[pre_len:].strip(os.path.sep)
+            zf.write(file, arcname)
+        zf.close()
+        #cmd = 'cacls ' + zipfilename +' /g everyone:f'
+        #p = os.popen(cmd, "w") #auto confirm
+        #p.write('y\n')    
+        ret['status'] = 'success' 
+        ret['name'] = zipfilename[prename_len:].strip(os.path.sep)
+        ret['data'] = 'http://newpms.cei.cn/AudioFile/'+zipfilename[prename_len:].strip(os.path.sep)
+    return HttpResponse(json.dumps(ret,ensure_ascii=False))
+
 #PlayVideo
 def PlayVideo(request):
     assert isinstance(request, HttpRequest)
     #Login OP
-    if request.user.is_authenticated():
+    if request.user.is_authenticated == True:
         # Do something for authenticated users.
         CurrentUser=request.user.username
         DBUser=User.objects.get(username=CurrentUser) 
@@ -500,19 +563,13 @@ def CaptionsEdit(request):
 def SlideEdit(request):
     assert isinstance(request, HttpRequest)
     #Login OP
-    #if request.user.is_authenticated() == False: 
-    #    LoginStr = urllib.parse.unquote(request.GET.get('link'))
-    #    if LoginStr:
-    #        user=CommonMethod.LinkLogin(LoginStr)
-    #        login(request,user)
-    #    else:
-    #        return HttpResponseRedirect('/login')  
-    LoginStr = urllib.parse.unquote(request.GET.get('link'))
-    if LoginStr:
-        user=CommonMethod.LinkLogin(LoginStr)
-        login(request,user)
-    else:
-        return HttpResponseRedirect('/login') 
+    if request.user.is_authenticated == False: 
+        LoginStr = urllib.parse.unquote(request.GET.get('link'))
+        if LoginStr:
+            user=CommonMethod.LinkLogin(LoginStr)
+            login(request,user)
+        else:
+            return HttpResponseRedirect('/login')  
     #Login ED
     if (request.GET.get('ProjectNo')) :
         ProjectNo = request.GET.get('ProjectNo')
@@ -766,7 +823,7 @@ def JsonCourseList(request):
 # CourseUpload
 def CourseUpload(request):
     #Login OP
-    if request.user.is_authenticated() == False: 
+    if request.user.is_authenticated == False: 
         LoginStr = request.GET.get('link')
         if LoginStr:
             user=CommonMethod.LinkLogin(LoginStr)
@@ -789,6 +846,54 @@ def CourseUpload(request):
     #lecturer=course.lecturer
     #if lecturer is None: # lecturer.name : 'NoneType' object has no attribute 'name'
     #    return HttpResponse('请先添加讲师信息')
+    LecturerData=[]
+    lecturers=models.lecturer.objects.filter(name=course.note)
+    if lecturers:
+        for  i in range(0, len(lecturers)):
+            if lecturers[i].introduction:
+                summary=lecturers[i].introduction
+            else:    
+                DOMTree = xml.dom.minidom.parse(LECTURER_ROOT+lecturers[i].IntroSrc)
+                collection = DOMTree.documentElement
+                if (collection.getElementsByTagName("Information1")[0].firstChild):
+                    summary=collection.getElementsByTagName("Information1")[0].firstChild.data
+                    summary=summary.replace("<![CDATA[","")
+                    summary=summary.replace("]]>","")
+                else:   
+                    summary='' 
+            ImgSrc=''    
+            if lecturers[i].PhotoSrc:
+                ImgSrc = '/LecturerFile/'+lecturers[i].PhotoSrc
+            LecturerData.append({
+                'index':i,
+                'id': lecturers[i].LecturerId, 
+                'name': lecturers[i].name,
+                'job':lecturers[i].post,
+                'ImgSrc':ImgSrc,
+                'summary':summary
+            })
+    thislecturer=course.lecturer
+    ThisLecturerData=[]
+    if  thislecturer:
+        ImgSrc=''
+        if thislecturer.PhotoSrc:
+            ImgSrc = '/LecturerFile/'+thislecturer.PhotoSrc
+        ThisLecturerData.append({
+                'id': thislecturer.LecturerId, 
+                'name': thislecturer.name,
+                'job':thislecturer.post,
+                'ImgSrc':ImgSrc,
+                'summary':thislecturer.introduction
+            })
+    AbstractData=[]
+    abstracts=models.CourseAbstract.objects.filter(course=course)
+    if abstracts:
+        for currentAbstract in abstracts:
+            AbstractData.append({
+                'index': currentAbstract.index, 
+                'text': currentAbstract.Text
+            })        
+    #        
     ThisTitle=course.title
     if course.InternalCategory.first():
         ThisInternalCategory = course.InternalCategory.first()
@@ -835,7 +940,12 @@ def CourseUpload(request):
     elif e==9:
         episode ="（一）（二）（三）（四）（五）（六）（七）（八）（九）"
     elif e==10:
-        episode ="（一）（二）（三）（四）（五）（六）（七）（八）（九）（十）"                          
+        episode ="（一）（二）（三）（四）（五）（六）（七）（八）（九）（十）"  
+    MakeDate=""
+    if course.MakeDate:
+         MakeDate=course.MakeDate
+    else:
+         MakeDate=""                              
     return render(request, 'app/CourseUpload.html',{'temvarCourseId':course.CourseId,
                                                     'temvarCourseTitle':ThisTitle,
                                                     'temvarEpisode':episode,
@@ -846,6 +956,13 @@ def CourseUpload(request):
                                                     #'temvarLecturerPost':lecturer.post,
                                                     #'temvarLecturerIntro':lecturer.introduction,
                                                     #'temvarLecturerPic':"/LecturerFile/"+lecturer.PhotoSrc,
+                                                    'temvarJsonLecturerData':LecturerData,
+                                                    'temvarThisLecturerData':ThisLecturerData,
+                                                    'temvarJsonAbstractData':AbstractData,
+                                                    'temvarKeyWords':course.KeyWords,
+                                                    "temvarTempletType":course.TempletType,
+                                                    "temvarType":course.type,
+                                                    "temvarMakeDate":MakeDate,
                                                     "temvarInternalCategoryId":ThisInternalCategoryId,
                                                     "temvarInternalCategoryIdTop":ThisInternalCategoryTopId,
                                                     'temvarInternalCategoryListTop':InternalCategoriesTop,
@@ -859,8 +976,53 @@ def CourseUpload(request):
                                                     })
 
 # UpdateLecturer
+@csrf_exempt
 def UpdateLecturer(request):
+    if request.method == 'GET':
+        name=request.GET.get("name")
+        LecturerData=[]
+        lecturers=models.lecturer.objects.filter(name=name)
+        if lecturers:
+            for  i in range(0, len(lecturers)):
+                if lecturers[i].introduction:
+                    summary=lecturers[i].introduction
+                else:    
+                    DOMTree = xml.dom.minidom.parse(LECTURER_ROOT+lecturers[i].IntroSrc)
+                    collection = DOMTree.documentElement
+                    if (collection.getElementsByTagName("Information1")[0].firstChild):
+                        summary=collection.getElementsByTagName("Information1")[0].firstChild.data
+                        summary=summary.replace("<![CDATA[","")
+                        summary=summary.replace("]]>","")
+                    else:   
+                        summary='' 
+                ImgSrc=''    
+                if lecturers[i].PhotoSrc:
+                    ImgSrc = '/LecturerFile/'+lecturers[i].PhotoSrc
+                LecturerData.append({
+                    'index':i,
+                    'id': lecturers[i].LecturerId, 
+                    'name': lecturers[i].name,
+                    'job':lecturers[i].post,
+                    'ImgSrc':ImgSrc,
+                    'summary':summary
+                })
+        return HttpResponse(json.dumps(LecturerData,ensure_ascii=False))        
     if request.method == 'POST':
+        #Login OP
+        if request.user.is_authenticated == True:
+        # Do something for authenticated users.
+            CurrentUser=request.user.username
+            DBUser=User.objects.get(username=CurrentUser) 
+        else: 
+        # Do something for anonymous users.
+            LoginStr = request.GET.get('link')
+            if CommonMethod.LinkLogin(LoginStr)!=False:
+                user=CommonMethod.LinkLogin(LoginStr)
+                login(request,user)
+                DBUser=User.objects.get(username=user.username) 
+            else:    
+                return HttpResponseRedirect('/login')   
+        #Login ED
         ret = {'id': None, 'PicSrc': None,'res':None}
         job=request.POST.get("LecturerJobInput")
         summary=request.POST.get("LecturerSummaryText")
@@ -875,10 +1037,24 @@ def UpdateLecturer(request):
             lecturer.post = job
             lecturer.introduction = summary
             lecturer.save()
+            Log_Extdata={}
+            Log_Extdata['id']=id
+            Log_Extdata['name']=name
+            Log_Extdata['job']=job
+            Log_Extdata['summary']=summary
+            NewLog = models.CourseLog.objects.create(course=None,user=DBUser,type='lecturer_Edit',log=Log_Extdata)
+            NewLog.save()
         else:
             id = datetime.now().strftime('%Y%m%d%H%M%S%f')  
             lecturer = models.lecturer(LecturerId=id,name=name,post=job,introduction=summary)
-            lecturer.save()   
+            lecturer.save()
+            Log_Extdata={}
+            Log_Extdata['id']=id
+            Log_Extdata['name']=name
+            Log_Extdata['job']=job
+            Log_Extdata['summary']=summary
+            NewLog = models.CourseLog.objects.create(course=None,user=DBUser,type='lecturer_Add',log=Log_Extdata)
+            NewLog.save()   
         ret['id']=lecturer.LecturerId
         ''' file = request.FILES.get('LecturerPhotoInput')
         if file:
@@ -908,6 +1084,10 @@ def UpdateLecturer(request):
         CourseThis = models.course.objects.get(CourseId=CourseId)
         CourseThis.lecturer=lecturer
         CourseThis.save()
+        Log_Extdata={}
+        Log_Extdata['LecturerId']=id
+        NewLog = models.CourseLog.objects.create(course=CourseThis,user=DBUser,type='Course_EditLecturer',log=Log_Extdata)
+        NewLog.save()   
         ret['res']='success'
         return HttpResponse(json.dumps(ret))
 
@@ -994,8 +1174,12 @@ def SaveTestFile(request):
 def SlideUpload(request):
     if request.method == 'POST':
         ret = {'id': "None", 'Src': "None",'SlideVersion':"None"}
-        ProjectNo=request.POST.get('ProjectNo')
-        course = models.course.objects.get(ProjectId=ProjectNo)
+        if request.POST.get('ProjectNo') :
+            ProjectNo=request.POST.get('ProjectNo')
+            course = models.course.objects.get(ProjectId=ProjectNo)
+        else :
+            CourseId=request.POST.get('CourseId')    
+            course = models.course.objects.get(CourseId=CourseId)
         id=course.CourseId
         '''file = request.FILES.get('SlideUploadInput')
            if file and os.path.splitext(file.name)[1]=='.pptx':
@@ -1027,7 +1211,7 @@ def SlideUpload(request):
 def CourseMake(request):
     assert isinstance(request, HttpRequest)
     #Login OP
-    if request.user.is_authenticated():
+    if request.user.is_authenticated == True:
         # Do something for authenticated users.
         CurrentUser=request.user.username
         DBUser=User.objects.get(username=CurrentUser) 
@@ -1042,6 +1226,19 @@ def CourseMake(request):
             return HttpResponseRedirect('/login')   
     #Login ED
     result = {"state":"None","note":"None"}
+    if request.method=='GET':
+        mode=request.GET.get('mode')
+        if mode=='remake': 
+            id=request.GET.get('id')
+            ThisCourse = models.ReEditCourse.objects.get(CourseId=id) 
+            if (models.EditTask.objects.filter(TaskType='CourseReEditMake',TaskState='WaitingToBegin',ExtendedData=id).count()>0):
+                result["state"]='请不要重复添加任务'
+                return HttpResponse(json.dumps(result,ensure_ascii=False))
+            else:
+                NewTask = models.EditTask(TaskType='CourseReEditMake',TaskState='WaitingToBegin',ExtendedData=id,creator=DBUser)
+                NewTask.save()
+                result["state"]='成功加入制作队列'
+                return HttpResponse(json.dumps(result,ensure_ascii=False))
     if request.method == 'POST':
         mode=request.GET.get('mode')
         id=request.POST.get('courseId')
@@ -1049,34 +1246,80 @@ def CourseMake(request):
         #info
         ThisCourse.title=request.POST.get('title')
         ThisCourse.GroupName=request.POST.get('groupName')
+        ThisCourse.type=request.POST.get('sourceType')
+        if request.POST.get('makeDate') !='':
+            MakeDate = datetime.strptime(request.POST.get('makeDate'),'%Y-%m-%d %H:%M:%S') 
+            ThisCourse.MakeDate=MakeDate
         #ThisCourse.KeyWords=request.POST.get('keyWords')
         #category
         ThisInternalCategoryId=request.POST.get('internalCategoryLevel2')
         InternalCategories=models.InternalCategory.objects.filter(InternalCategoryId=ThisInternalCategoryId)
-        ThisCourse.InternalCategory.set(InternalCategories);
+        ThisCourse.InternalCategory.set(InternalCategories)
         ThisCourse.save()
-        ThisCourse.PublishCategory.all().delete();
+        #ThisCourse.PublishCategory.all().delete() #
+        for ThisCategory in ThisCourse.PublishCategory.all():
+            ThisCourse.PublishCategory.remove(ThisCategory)
+            ThisCourse.save()
+        NewLog = models.CourseLog.objects.create(course=ThisCourse,user=DBUser,type='PublishCategory_Cleaning',log='')
+        NewLog.save()
         DicJson=json.loads(request.POST.get('dicCategoryInput'))
         for item in DicJson:
             if models.PublishCategory.objects.filter(PublishCategoryId=item['id']).count()==0:
                 NewCategory = models.PublishCategory.objects.create(PublishCategoryId=item['id'],type='guid',name=item['name'])
-            ThisCourse.PublishCategory.add(models.PublishCategory.objects.get(PublishCategoryId=item['id']));
+                NewCategory.save()
+                ThisCategory=models.PublishCategory.objects.get(PublishCategoryId=item['id'])
+                Log_Extdata={}
+                Log_Extdata['state']=ThisCategory.PublishCategoryId
+                NewLog = models.CourseLog.objects.create(course=ThisCourse,user=DBUser,type='PublishCategory_AddCategory',log=Log_Extdata)
+                NewLog.save()
+            ThisCourse.PublishCategory.add(models.PublishCategory.objects.get(PublishCategoryId=item['id']))
+            ThisCourse.save()
+            Log_Extdata={}
+            Log_Extdata['id']=item['id']
+            Log_Extdata['name']=item['name']
+            NewLog = models.CourseLog.objects.create(course=ThisCourse,user=DBUser,type='PublishCategory_Add',log=Log_Extdata)
+            NewLog.save()
         TYJson=json.loads(request.POST.get('tyCategoryInput'))
         for item in TYJson:
             if models.PublishCategory.objects.filter(PublishCategoryId=item['id']).count()==0:
                 NewCategory = models.PublishCategory.objects.create(PublishCategoryId=item['id'],type='TYName',name=item['name'])
-            ThisCourse.PublishCategory.add(models.PublishCategory.objects.get(PublishCategoryId=item['id']));
+                NewCategory.save()
+                ThisCategory=models.PublishCategory.objects.get(PublishCategoryId=item['id'])
+                Log_Extdata={}
+                Log_Extdata['state']=ThisCategory.PublishCategoryId
+                NewLog = models.CourseLog.objects.create(course=ThisCourse,user=DBUser,type='PublishCategory_AddCategory',log=Log_Extdata)
+                NewLog.save()
+            ThisCourse.PublishCategory.add(models.PublishCategory.objects.get(PublishCategoryId=item['id']))
+            ThisCourse.save()
+            Log_Extdata={}
+            Log_Extdata['id']=item['id']
+            Log_Extdata['name']=item['name']
+            NewLog = models.CourseLog.objects.create(course=ThisCourse,user=DBUser,type='PublishCategory_Add',log=Log_Extdata)
+            NewLog.save()
         DZJson=json.loads(request.POST.get('dzCategoryInput'))
         for item in DZJson:
             if models.PublishCategory.objects.filter(PublishCategoryId=item['id']).count()==0:
                 NewCategory = models.PublishCategory.objects.create(PublishCategoryId=item['id'],type='DZName',name=item['name'])
-            ThisCourse.PublishCategory.add(models.PublishCategory.objects.get(PublishCategoryId=item['id']));
+                NewCategory.save()
+                ThisCategory=models.PublishCategory.objects.get(PublishCategoryId=item['id'])
+                Log_Extdata={}
+                Log_Extdata['state']=ThisCategory.PublishCategoryId
+                NewLog = models.CourseLog.objects.create(course=ThisCourse,user=DBUser,type='PublishCategory_AddCategory',log=Log_Extdata)
+                NewLog.save()
+            ThisCourse.PublishCategory.add(models.PublishCategory.objects.get(PublishCategoryId=item['id']))
+            ThisCourse.save()
+            Log_Extdata={}
+            Log_Extdata['id']=item['id']
+            Log_Extdata['name']=item['name']
+            NewLog = models.CourseLog.objects.create(course=ThisCourse,user=DBUser,type='PublishCategory_Add',log=Log_Extdata)
+            NewLog.save()
         GXJson=json.loads(request.POST.get('gxCategoryInput'))
         for item in GXJson:
             if models.PublishCategory.objects.filter(PublishCategoryId=item['id']).count()==0:
                 NewCategory = models.PublishCategory.objects.create(PublishCategoryId=item['id'],type='GXName',name=item['name'])
-            ThisCourse.PublishCategory.add(models.PublishCategory.objects.get(PublishCategoryId=item['id']));    
-        ThisCourse.save()
+                NewCategory.save()
+            ThisCourse.PublishCategory.add(models.PublishCategory.objects.get(PublishCategoryId=item['id']))
+            ThisCourse.save()  
         result["state"]='成功'
         result["note"]=ThisInternalCategoryId
         #
@@ -1119,7 +1362,9 @@ def CourseMake(request):
                 NewTask.course.add(ThisCourse)
                 NewTask.TaskState='WaitingToBegin'
                 NewTask.save()
-                result["state"]='成功加入制作队列'        
+                result["state"]='成功加入制作队列'
+        # OP
+        # ED                
     return HttpResponse(json.dumps(result,ensure_ascii=False))
 
 # FullTextDownloadTXT
@@ -1129,7 +1374,10 @@ def FullTextDownloadTXT(request):
     ThisCourse = models.course.objects.get(CourseId=id)
     #path = COURSE_ROOT + id[0:4] + '/' + id + '/data/'
     #path = COURSE_ROOT + id[0:4] + '/' + id + '/'
-    path = COURSE_HTTP_ROOT + id[0:4] + '/' + id + '/'
+    if ThisCourse.SourceCourseId is None :
+        path = COURSE_HTTP_ROOT + id[0:4] + '/' + id + '/'
+    else :
+        path = COURSE_HTTP_ROOT + id[0:4] + '/' + id + '/data/'
     CaptionsRequest = requests.get(path + 'captions.json')
     CaptionsRequest.encoding = 'utf-8'
     CaptionsContent =  CaptionsRequest.text
@@ -1145,6 +1393,9 @@ def FullTextDownloadTXT(request):
         '''
     txtName = id+"_FullText.txt"
     f=open(UPLOADTEMP_ROOT+txtName, "w",encoding='utf-8')
+    f.write(ThisCourse.title +'\r\n')
+    if ThisCourse.lecturer:
+        f.write(ThisCourse.lecturer.name + '      ' + ThisCourse.lecturer.post + '\r\n')
     for item in JsonData:
         if item['type'].startswith('TitleItem') :
             f.write('\r\n' + '\r\n' + '      ' + item['content']+ '\r\n')
@@ -1161,7 +1412,8 @@ def FullTextDownloadTXT(request):
     os.remove(UPLOADTEMP_ROOT+txtName)
     #file=open(path + 'FullText.txt','rb')      
     #response =FileResponse(file)  
-    FullTextRequest = requests.get(path + 'FullText.txt')
+    getpath = COURSE_HTTP_ROOT + id[0:4] + '/' + id + '/' #有无衍生课件生成位置一样
+    FullTextRequest = requests.get(getpath + 'FullText.txt')
     FullTextRequest.encoding = 'utf-8'
     response = HttpResponse(FullTextRequest.text)
     response['Content-Type']='application/octet-stream'  
@@ -1225,6 +1477,27 @@ def SRTDownload(request):
     response['Content-Type']='application/octet-stream'  
     response['Content-Disposition']='attachment;filename="'+ id +'.srt"'        
     return response
+
+#
+def LineTextDownload(request):
+    assert isinstance(request, HttpRequest)
+    id = request.GET.get('id')
+    ThisCourse = models.course.objects.get(CourseId=id)
+    path = COURSE_HTTP_ROOT + id[0:4] + '/' + id + '/'
+    CaptionsRequest = requests.get(path + 'captions.json')
+    CaptionsRequest.encoding = 'utf-8'
+    Jsonstr= str(CaptionsRequest.text)
+    if Jsonstr.startswith(u'\ufeff'):
+            Jsonstr = Jsonstr.encode('utf8')[3:].decode('utf8')   
+    JsonData = json.loads(Jsonstr) 
+    ResponseStr=''
+    for item in JsonData:
+        if item['type']=='SubItem':
+            ResponseStr +=  item['content'] + '\r\n'
+    response = HttpResponse(ResponseStr)
+    response['Content-Type']='application/octet-stream'  
+    response['Content-Disposition']='attachment;filename="'+ id +'.txt"'        
+    return response    
 
 # JsonDataSave
 def JsonDataSave(request):
@@ -1326,6 +1599,182 @@ def JsonCourseAbstractUpdate(request):
     else:
         return JsonResponse(ret) 
 
+#ReEdit OP
+def SlideReEdit(request):
+    assert isinstance(request, HttpRequest)
+    #Login OP
+    if request.user.is_authenticated == False: 
+        LoginStr = urllib.parse.unquote(request.GET.get('link'))
+        if LoginStr:
+            user=CommonMethod.LinkLogin(LoginStr)
+            login(request,user)
+        else:
+            return HttpResponseRedirect('/login')  
+    #Login ED
+    if (request.GET.get('ProjectNo')) :
+        ProjectNo = request.GET.get('ProjectNo')
+        course = models.ReEditCourse.objects.get(ProjectId=ProjectNo)
+    elif (request.GET.get('id')) :
+        id = request.GET.get('id')
+        course = models.ReEditCourse.objects.get(CourseId=id)
+    CourseId=course.CourseId
+    path = COURSE_HTTP_ROOT + CourseId[0:4] + '/' + CourseId + '/'
+    FilePath = COURSE_ROOT + CourseId[0:4] + '/' + CourseId + '/'
+    SlideName=''
+    if course.SlideVersion is None or course.SlideVersion=='':
+        SlideName=CourseId
+    else:
+        SlideName=CourseId+'_'+course.SlideVersion
+    AbstractData=[]
+    #abstracts=models.CourseAbstract.objects.filter(course=course)
+    #if abstracts:
+    #    for currentAbstract in abstracts:
+    #        AbstractData.append({
+    #            'index': currentAbstract.index, 
+    #            'text': currentAbstract.Text
+    #        })
+    LecturerData=[]
+    lecturers=models.lecturer.objects.filter(name=course.note)
+    if lecturers:
+        for  i in range(0, len(lecturers)):
+            if lecturers[i].introduction:
+                summary=lecturers[i].introduction
+            else:    
+                DOMTree = xml.dom.minidom.parse(LECTURER_ROOT+lecturers[i].IntroSrc)
+                collection = DOMTree.documentElement
+                if (collection.getElementsByTagName("Information1")[0].firstChild):
+                    summary=collection.getElementsByTagName("Information1")[0].firstChild.data
+                    summary=summary.replace("<![CDATA[","")
+                    summary=summary.replace("]]>","")
+                else:   
+                    summary='' 
+            ImgSrc=''    
+            if lecturers[i].PhotoSrc:
+                ImgSrc = '/LecturerFile/'+lecturers[i].PhotoSrc
+            LecturerData.append({
+                'index':i,
+                'id': lecturers[i].LecturerId, 
+                'name': lecturers[i].name,
+                'job':lecturers[i].post,
+                'ImgSrc':ImgSrc,
+                'summary':summary
+            })
+    thislecturer=course.lecturer
+    ThisLecturerData=[]
+    if  thislecturer:
+        ImgSrc=''
+        if thislecturer.PhotoSrc:
+            ImgSrc = '/LecturerFile/'+thislecturer.PhotoSrc
+        ThisLecturerData.append({
+                'id': thislecturer.LecturerId, 
+                'name': thislecturer.name,
+                'job':thislecturer.post,
+                'ImgSrc':ImgSrc,
+                'summary':thislecturer.introduction
+            })
+    #with open(FilePath+'captions.json', 'r+', encoding='utf-8') as JsonText:
+        #JsonDate = json.dumps(JsonText.read(),ensure_ascii=False)
+        #JsonData = json.loads(JsonText.read()) 
+    CaptionsRequest = requests.get(path + 'captions.json')
+    CaptionsRequest.encoding = 'utf-8'
+    JsonText=CaptionsRequest.text
+    if JsonText.startswith(u'\ufeff'):
+        JsonText = JsonText.encode('utf8')[3:].decode('utf8')
+    JsonData = json.loads(JsonText) 
+    return render(request,'app/SlideReEdit.html',{'temvarCourseId':CourseId,
+                                                'temvarJsonData':JsonData,
+                                                'temvarDocPath' :'http://newpms.cei.cn/docs/p/PowerPointFrame.aspx?WOPISrc=http%3A%2F%2Fpmsdocs.cei.cn%3A666%2Fwopi%2Ffiles%2F'+SlideName+'.pptx%3Fuserid%3Dcc%26username%3Dchenchen&PowerPointView=EditView',
+                                                #'ModeNaviLink':'/CourseUpload/?id='+CourseId+'&ProjectNo='+ProjectNo,
+                                                'temvarCourseTitle':course.title,
+                                                #'ModeNaviTitle':'属性编辑',
+                                                'tempvarTextDownload':"http://newpms.cei.cn/FullTextDownloadTXT/?id="+CourseId,
+                                                'tempvarSlideDownload':path+'slide0.zip',
+                                                'tempvarCurrentSlideDownload':'/DocFile/'+SlideName+'.pptx',
+                                                'tempvarTestDownload':path+'test.zip',
+                                                'temvarAudioFilePath':path + CourseId +'.mp3',
+                                                'temvarPicFilePath':path + '001.jpg',
+                                                'temvarSlideVersion':course.SlideVersion,
+                                                #'temvarVideoFilePath':path+'rip.mp4',
+                                                'temvarJsonAbstractData':AbstractData,
+                                                'temvarJsonLecturerData':LecturerData,
+                                                'temvarThisLecturerData':ThisLecturerData,
+                                                'temvarKeyWords':course.KeyWords
+                                                })
+
+def JsonDataSaveReEdit(request):
+    assert isinstance(request, HttpRequest)
+    ret = {'status': False, 'data': None, 'error': None}
+    if request.method == 'POST':
+            mode = request.GET.get('mode')
+            CourseId=request.GET.get('id')
+            if mode=='auto':
+                TargetFile=CourseId+'_captions_auto.json'
+            else:
+                TargetFile=CourseId+'_captions.json'
+            #path = os.path.join(COURSE_ROOT, CourseId[0:4] + '/' + CourseId + '/')
+            #JsonData =  json.dumps(request.body, indent=2, sort_keys=True,ensure_ascii=False).encode('utf8')
+            JsonData=str(request.body, encoding = "utf-8")
+            # 更新集数 
+            e=1
+            JsonObj = json.loads(JsonData)
+            #修正首字幕分集
+            for index in range(len(JsonObj)):
+                if JsonObj[index]["type"]=="SubItem" :
+                    if JsonObj[index]["IsBeginningOfParagraph"]=="episode" :
+                        JsonObj[index]["IsBeginningOfParagraph"]="true"
+                        ret['data']='index:' + str(index)  
+                    break
+            for i in JsonObj:
+                if i["type"]=="SubItem" and i["IsBeginningOfParagraph"]=="episode":
+                    e += 1  
+            course = models.ReEditCourse.objects.get(CourseId=CourseId)   
+            course.EpisodeCount=e
+            course.save()    
+            #ret['data'] = 'EpisodeCount:' + str(e)  
+            #
+            #ret['data'] = request.body
+            f = open(UPLOADTEMP_ROOT+TargetFile,'w',encoding= 'utf8') #打开文件open()是file()的别名
+            f.write(json.dumps(JsonObj, ensure_ascii=False)) #把字符串写入文件
+            f.close() #关闭文件
+            if mode=='auto':
+                uploaddata = {"name":"captions_auto.json"}
+                uploadfile={}
+                uploadfile['file']= ("captions_auto.json",open(UPLOADTEMP_ROOT+TargetFile,'rb').read())
+            else:
+                uploaddata = {"name":"captions.json"}
+                uploadfile={}
+                uploadfile['file']= ("captions.json",open(UPLOADTEMP_ROOT+TargetFile,'rb').read())
+            r_srt = requests.post(COURSEUPLOAD_URL+CourseId, data = uploaddata, files=uploadfile)
+            os.remove(UPLOADTEMP_ROOT+TargetFile)
+            if json.loads(r_srt.text)[0]["Name"] :
+                ret['status'] = True                   
+            #
+            #return JsonResponse(ret) 
+            return HttpResponse()
+    else:
+        return JsonResponse(ret) 
+
+@csrf_exempt
+def SlideReUpload(request):
+    if request.method == 'POST':
+        ret = {'id': "None", 'Src': "None",'SlideVersion':"None"}
+        if request.POST.get('ProjectNo') :
+            ProjectNo=request.POST.get('ProjectNo')
+            course = models.ReEditCourse.objects.get(ProjectId=ProjectNo)
+        else :
+            CourseId=request.POST.get('CourseId')    
+            course = models.ReEditCourse.objects.get(CourseId=CourseId)
+        id=course.CourseId
+        if (course.SlideVersion is None) or (course.SlideVersion==''):
+            SlideVersion=1
+        else:
+            SlideVersion=int(course.SlideVersion)+1
+        course.SlideVersion=SlideVersion
+        course.save()     
+        ret['Src'] = id +'_' + str(SlideVersion)
+        return HttpResponse(json.dumps(ret))           
+#ReEdit ED
+
 # Old Course
 def OldCourseQuery(request):
     #
@@ -1352,23 +1801,39 @@ def OldCourseQuery(request):
              QuerySource='客户'
         else:
             QuerySource = ''
+    if request.GET.get('area') :
+        AreaStr=''
+        if urllib.parse.unquote(request.GET.get('area')) == 's':
+            AreaStr = ' and Sourse != \'客户项目\'' 
+        else:
+            AreaStr =''        
     StartDate= request.GET.get('start')
     EndDate= request.GET.get('end') 
     list = [] # 空列表
     # 打开数据库连接 
-    db = pymysql.connect("203.207.118.110","root","cuijingyi","zjsp",charset='utf8') 
+    PublishType='' 
+    if request.GET.get('sheet') :
+        PublishType=request.GET.get('sheet')
+        if PublishType=='none' :
+             db = pymysql.connect("203.207.118.111","root","cuijingyi","zjsp",charset='utf8') 
+             table='course'
+        if PublishType=='dz' :
+             db = pymysql.connect("203.207.118.111","root","cuijingyi","ceinet",charset='utf8') 
+             table='course_ganjiao'
+    #db = pymysql.connect("203.207.118.111","root","cuijingyi","zjsp",charset='utf8') 
     # 使用cursor()方法获取操作游标  
     cursor = db.cursor() 
     # SQL 查询语句 
-    sql = "SELECT Id ,Theme,Themegroup,Speaker,Speakerinfo,Format,Onloadtime,'旧课件' as DataType,Sourse,Producer,Mark,Duration,Discipline1,Discipline2,'' as CourseAbstract FROM course where Theme like '%" \
+    sql = "SELECT Id ,Theme,Themegroup,Speaker,Speakerinfo,Format,Onloadtime,'旧课件' as DataType,Sourse,Producer,Mark,Duration,Discipline1,Discipline2,'' as CourseAbstract,Keywords as KeyWords FROM " + table + " where Theme like '%" \
     + QueryTitle + "%' and Speaker like '%" + QueryLecturer + "%' and KeyWords like '%" + QueryKey + "%' and Sourse like '%" + QuerySource +"%' and Format like '%" + QueryType + "%' \
-    and Onloadtime between '" + StartDate + "' and '" + EndDate +  "' order by Date desc,Theme asc"
+    and Onloadtime between '" + StartDate + "' and '" + EndDate +  "'" + AreaStr + " order by Date desc,Theme asc"
     #return HttpResponse(sql)
     try: 
     # 执行SQL语句 
         cursor.execute(sql) 
         # 获取所有记录列表 
         results = cursor.fetchall() 
+        #return HttpResponse(results)
         for row in results: 
             CourseId = str(row[0])
             title = str(row[1]) 
@@ -1387,13 +1852,16 @@ def OldCourseQuery(request):
             elif str(row[10])=='10010' :
                  progress='未审已发'    
             elif str(row[10])=='11010' :
-                 progress='已审已发'   
+                 progress='已审已发' 
+            else:
+                 progress='不确定'       
             duration = str(row[11])   
             InternalCategoryTop = str(row[12])
             InternalCategory = str(row[13])   
-            CourseAbstract = str(row[14])              
+            CourseAbstract = str(row[14])   
+            KeyWords = str(row[15])            
             dict = {}
-            dict = {'CourseId': CourseId, 'title': title,'GroupName':GroupName, 'lecturer_name': lecturer,'lecturer_post':post, 'TempletType': TempletType, 'CreateDate': Date,'DataType':DataType,'type':type,'creator':creator,'progress':progress,'duration':duration,'InternalCategoryTop':InternalCategoryTop,'InternalCategory':InternalCategory,'CourseAbstract':CourseAbstract}
+            dict = {'CourseId': CourseId, 'title': title,'GroupName':GroupName, 'lecturer_name': lecturer,'lecturer_post':post, 'TempletType': TempletType, 'CreateDate': Date,'DataType':DataType,'type':type,'creator':creator,'progress':progress,'duration':duration,'InternalCategoryTop':InternalCategoryTop,'InternalCategory':InternalCategory,'CourseAbstract':CourseAbstract,'KeyWords':KeyWords}
             list.append(dict)
     except: 
         print ("Error: unable to fetch data") 
@@ -1420,11 +1888,11 @@ def OldCourseQueryExacted(request):
          SQLField ='Theme'
     list = [] # 空列表
     # 打开数据库连接 
-    db = pymysql.connect("203.207.118.110","root","cuijingyi","zjsp",charset='utf8') 
+    db = pymysql.connect("203.207.118.111","root","cuijingyi","zjsp",charset='utf8') 
     # 使用cursor()方法获取操作游标  
     cursor = db.cursor() 
     # SQL 查询语句 
-    sql = "SELECT Id,Theme,Themegroup,Speaker,Speakerinfo,Format,Onloadtime,'旧课件' as DataType,Sourse,Producer as creator,Duration as duration,Mark,Discipline1 as InternalCategoryTop,Discipline2 as InternalCategory,'' as CourseAbstract FROM course where " + SQLField + " = '"  + QueryVal + "' order by Date desc,Theme asc limit 1"
+    sql = "SELECT Id,Theme,Themegroup,Speaker,Speakerinfo,Format,Onloadtime,'旧课件' as DataType,Sourse,Producer as creator,Duration as duration,Mark,Discipline1 as InternalCategoryTop,Discipline2 as InternalCategory,'' as CourseAbstract,Keywords as KeyWords FROM course where " + SQLField + " = '"  + QueryVal + "' order by Date desc,Theme asc"
     #return HttpResponse(sql)
     try: 
     # 执行SQL语句 
@@ -1454,9 +1922,10 @@ def OldCourseQueryExacted(request):
                  progress='已审已发'
             InternalCategoryTop = str(row[12])
             InternalCategory = str(row[13])   
-            CourseAbstract = str(row[14])                   
+            CourseAbstract = str(row[14]) 
+            KeyWords = str(row[15])                
             dict = {}
-            dict = {'CourseId': CourseId, 'title': title,'GroupName':GroupName, 'lecturer_name': lecturer,'lecturer_post':post, 'TempletType': TempletType, 'CreateDate': Date,'DataType':DataType,'type':type,'creator':creator,'progress':progress,'duration':duration,'InternalCategoryTop':InternalCategoryTop,'InternalCategory':InternalCategory,'CourseAbstract':CourseAbstract}
+            dict = {'CourseId': CourseId, 'title': title,'GroupName':GroupName, 'lecturer_name': lecturer,'lecturer_post':post, 'TempletType': TempletType, 'CreateDate': Date,'DataType':DataType,'type':type,'creator':creator,'progress':progress,'duration':duration,'InternalCategoryTop':InternalCategoryTop,'InternalCategory':InternalCategory,'CourseAbstract':CourseAbstract,'KeyWords':KeyWords}
             list.append(dict)
     except: 
         print ("Error: unable to fetch data") 
@@ -1504,9 +1973,14 @@ def ApiLogin(request):
             # 进行登录成功的操作，重定向到某处等
             ret['status'] = True
             ret['username'] = user.username
-            ret['group'] = user.groups.first().name
+            #ret['group'] = user.groups.first().name+';'# 不分开
             ret['FirstName'] = user.first_name
             ret['LastName'] = user.last_name
+            #多角色
+            UserGroups = ''
+            for g in user.groups.all():
+                UserGroups += g.name +';'
+            ret['group']= UserGroups
         else:
             # 返回用户名和密码错误信息
             ret['status'] = username+password
@@ -1581,9 +2055,22 @@ class CourseViewSet(viewsets.ModelViewSet):
                 SourceType = 'X'
         StartDate= request.GET.get('start')
         EndDate= request.GET.get('end')  
-        courses = models.course.objects.filter(Q(CreateDate__range=(StartDate, EndDate)) & (~Q(SourceCourseId=None) | Q(EpisodeCount=1,progress='made')) & (Q(title__contains=title) & Q(KeyWords__contains=keyword) & Q(lecturer__name__contains=lecturer) & Q(type__contains=SourceType) & Q(TempletType__contains=TempletType)))
+        courses = models.course.objects.filter(Q(MakeDate__range=(StartDate, EndDate)) & (~Q(SourceCourseId=None) | Q(EpisodeCount=1,progress='made') | Q(EpisodeCount=1,progress='published')) \
+                    & Q(title__contains=title) & Q(KeyWords__contains=keyword) & Q(lecturer__name__contains=lecturer) & Q(type__contains=SourceType) & Q(TempletType__contains=TempletType))
+        if request.GET.get('area') :
+            if urllib.parse.unquote(request.GET.get('area')) == 's':
+                courses = courses.exclude(type = 'NorthOnly')
+        PublishType='' 
+        if request.GET.get('sheet') :
+            PublishType=request.GET.get('sheet')
+            if PublishType=='none' :
+                PublishType = ''
+            if PublishType=='dz' :
+                PublishType = 'DZName'
+                courses = courses.filter(Q(PublishCategory__type__contains=PublishType) | Q(SourceCourseId__PublishCategory__type__contains=PublishType))
         #courses = models.course.objects.filter((~Q(SourceCourseId=None) & Q(SourceCourseId__lecturer__name__contains=keyword)) | (Q(EpisodeCount=1,progress='made') & Q(lecturer__name__contains=keyword)))
         serializer = RestSerializers.CourseSerializer(courses, many=True) 
+        #return Response(PublishType)
         return Response(serializer.data,headers=ThisHeaders) # 最后返回经过序列化的数据 
     @list_route()
     def FieldQueryExacted(self, request): 
@@ -1597,11 +2084,11 @@ class CourseViewSet(viewsets.ModelViewSet):
         if request.GET.get('val') :
             val = request.GET.get('val')
         if field == 'title' :
-            courses = models.course.objects.filter(title=val)
+            courses = models.course.objects.filter(Q(title=val) & (~Q(SourceCourseId=None) | Q(EpisodeCount=1,progress='made') | Q(EpisodeCount=1,progress='published')))
         elif field == 'id' :   
-            courses = models.course.objects.filter(CourseId=val)
+            courses = models.course.objects.filter(Q(CourseId=val) & (~Q(SourceCourseId=None) | Q(EpisodeCount=1,progress='made') | Q(EpisodeCount=1,progress='published')))
         serializer = RestSerializers.CourseSerializer(courses, many=True) 
-        return Response(serializer.data,headers=ThisHeaders) # 最后返回经过序列化的数据 
+        return Response(serializer.data,headers=ThisHeaders) # 最后返回经过序列化的数据  
     # function based OP
 class JSONResponse(HttpResponse):
     """
@@ -1686,17 +2173,24 @@ class EditTaskList(APIView):
         #else:
         #    return JSONResponse("None User", status=400)
         data['TaskState'] = 'WaitingToBegin'
-        serializer = RestSerializers.EditTaskSerializerInsert(data=data)
+        if data['TaskType'] == 'OldCourseDownload':
+            serializer = RestSerializers.EditTaskSerializerInsertNoCourse(data=data)
+        else:
+            serializer = RestSerializers.EditTaskSerializerInsert(data=data)
         if serializer.is_valid():
-            CourseId = data['course'][0]
-            ThisCourse = models.course.objects.filter(CourseId=CourseId)
-            if (models.EditTask.objects.filter(course=ThisCourse,TaskType=data['TaskType'],TaskState='WaitingToBegin').count()>0) and (data['TaskType']!='CourseDownload'):
-                #只能判断一个课，暂时不做处理 
-                CourseId=CourseId
-                #return Response("Task Repetition", status=status.HTTP_204_NO_CONTENT)     
-            else:
+            if data['course'] is None:
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+            CourseId = data['course'][0]
+            ThisCourse = models.course.objects.filter(CourseId=CourseId)
+            #if (models.EditTask.objects.filter(course=ThisCourse,TaskType=data['TaskType'],TaskState='WaitingToBegin').count()>0) and (data['TaskType']!='CourseDownload'):
+                #只能判断一个课，暂时不做处理 
+                #2.1 error The QuerySet value for an exact lookup must be limited to one result using slicing.
+            #    CourseId=CourseId
+                #return Response("Task Repetition", status=status.HTTP_204_NO_CONTENT)     
+            #else:
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)   
 class EditTaskDetail(APIView):
     #permission_classes = (permissions.IsAuthenticated,) #,结尾必须有
@@ -1718,6 +2212,23 @@ class CourseTempletList(APIView):
     def get(self, request, format=None):
         CourseTemplets = models.CourseTemplet.objects.all()
         serializer = RestSerializers.CourseTempletSerializer(CourseTemplets, many=True)
-        return Response(serializer.data)      
+        return Response(serializer.data) 
+class CustomerList(APIView):
+    #permission_classes = (permissions.IsAuthenticated,) #,结尾必须有
+    def get(self, request, format=None):
+        customers = models.customer.objects.all()
+        serializer = RestSerializers.CustomerSerializer(customers, many=True)
+        return Response(serializer.data)
+    def post(self, request, format=None):
+        data = JSONParser().parse(request)
+        serializer = RestSerializers.CustomerSerializer(data=data)
+        customers = models.customer.objects.filter(name=data['name'] , area=data['area']) 
+        if customers.count() == 0 :
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:  
+            return JSONResponse("Name Repetition", status=204)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)           
 # REST ED
     

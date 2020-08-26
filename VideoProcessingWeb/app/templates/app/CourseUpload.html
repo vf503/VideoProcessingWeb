@@ -5,6 +5,8 @@
 {% load staticfiles %}
 <link rel="stylesheet" type="text/css" href="{% static 'app/zTree/css/demo.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'app/zTree/css/zTreeStyle/zTreeStyle.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'app/content/bootstrap-datetimepicker.min.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'app/jquery-ui/jquery-ui.css' %}" />
 <style type="text/css">
     .TreeArea{
         float:right;
@@ -20,9 +22,14 @@
         width: 200px;
         border: 1px solid rgba(204, 204, 204, 1);
     }
+    #LecturerBox
+    {
+        float:left;
+        position: relative;
+    }
     .LecturerInfoBox
     {
-        float:none;
+        float:left;
         position: relative;
         width: 390px;
     }
@@ -52,10 +59,86 @@
         float: right;
         position: relative;
     }
+     .LecturerTabPageImg{
+        width: 160px;
+        height: 120px;
+        float:none;
+        clear: both;
+        position: relative;
+    }
+    .LecturerTabPageName{
+        float: none;
+        clear: both;
+        position: relative;
+        width: 390px;
+    }
+    .LecturerTabPageJob{
+        float: none;
+        clear: both;
+        position: relative;
+        width: 390px；
+    }
+    .LecturerTabPageSummary{
+        float: none;
+        clear: both;
+        position: relative;
+        width: 390px;
+        height: 120px;
+    }
+    .LecturerTabPageBtnGroup{
+        float: none;
+        clear: both;
+        position: relative;
+    }
+    .nav-tabs li.active a,.nav-tabs li.active a:hover,.nav-tabs li.active a:visited,.nav-tabs li.active a:focus {
+        border: 0 none;
+        background:rgba(66, 139, 202, 1);
+        color:white;
+        }
+    #LecturerSendRes{
+        color:green
+    }
+    .LecturerName{
+        border: 1px solid #BEBEBE;
+    }
+    .LecturerName:empty:before{
+        content:attr(placeholder);
+        font-size: 16px;
+        color: green;
+    }
+    .LecturerName:focus{
+        content:none;
+    }
+    .LecturerJob{
+        border: 1px solid #BEBEBE;
+    }
+    .LecturerJob:empty:before{
+        content:attr(placeholder);
+        font-size: 16px;
+        color: green;
+    }
+    .LecturerJob:focus{
+        content:none;
+    }
+    #CourseAbstractBox textarea{
+        max-width:340px;
+        width:340px;
+        height:140px;
+    }
 </style>
 <script src="{% static 'app/zTree/js/jquery.ztree.core.js' %}"></script>
 <script src="{% static 'app/zTree/js/jquery.ztree.excheck.js' %}"></script>
+<script src="{% static 'app/scripts/jquery.cookie.js' %}"></script>
+<script src="{% static 'app/scripts/moment.js' %}"></script>
+<script src="{% static 'app/scripts/bootstrap-datetimepicker.min.js' %}"></script>
+<script src="{% static 'app/jquery-ui/jquery-ui.js' %}"></script>
 <script>
+    //
+    var TempletType = "{{ temvarTempletType|safe }}";
+    var LecturerData = {{ temvarJsonLecturerData|safe }};
+    var ThisLecturerData = {{ temvarThisLecturerData|safe }};
+    var CurrentLecturerId = "";
+    var AbstractData = {{ temvarJsonAbstractData|safe }};
     //
     var ThisDicStored={{temvarDicIdList|safe}};
     var ThisTYStored={{temvarTYIdList|safe}};
@@ -261,10 +344,26 @@
     var CourseProgress="{{ temvarCourseProgress|safe }}";
     var InternalCategoryListLv2={{ temvarInternalCategoryListLv2|safe }};
     $(document).ready(function(){
+        if(AbstractData.length>0)
+        {
+            $.each(AbstractData, function(i, item)    
+            {
+                console.log(AbstractData);
+                //:eq(i) [i] 均无效
+                var ThisAbstractData = AbstractData.filter(function (e) { return e.index == i+1; });
+                console.log(ThisAbstractData);
+                $("#CourseAbstractbox textarea").eq(i).text(ThisAbstractData[0]["text"]);
+            });
+        }
         $.fn.zTree.init($("#DicTree"), settingDic);
         $.fn.zTree.init($("#DZTree"), settingDZ);
         $.fn.zTree.init($("#TYTree"), settingTY);
         $.fn.zTree.init($("#GXTree"), settingGX);
+        $('#makedatetimepicker').datetimepicker({
+            format: 'YYYY-mm-DD HH:MM:ss'
+        });
+        //$("#makedatetimepicker").val("{{temvarMakeDate}}");
+        $("#SourceType").val("{{temvarType}}");
         $("#InternalCategory").val("{{temvarInternalCategoryIdTop}}");
         var InternalCategoryListLv2Current=InternalCategoryListLv2.filter(function (e) { return e.parent_id == "{{temvarInternalCategoryIdTop}}"; });  
         for(var i=0;i<InternalCategoryListLv2Current.length;i++){
@@ -283,6 +382,51 @@
                 }  
             }
         });
+        //
+        if (ThisLecturerData.length==1)
+        {
+            $("#LecturerTabBox").hide();
+            $("#LecturerInfoBox").show();
+            $("#LecturerUpdateBtn").show();
+            $("#LecturerReSelectBtn").show();
+            if(ThisLecturerData[0].ImgSrc!='')
+            {
+                $("#LecturerPic").attr("src",ThisLecturerData[0].ImgSrc);
+            }
+            else
+            { 
+                $("#LecturerPic").attr("src","{{temvarPicFilePath}}")
+            }
+            $("#LecturerNameInput").text(ThisLecturerData[0].name);
+            $("#LecturerJobInput").text(ThisLecturerData[0].job);
+            $("#LecturerSummaryText").text(ThisLecturerData[0].summary);
+            CurrentLecturerId=ThisLecturerData[0].id;
+        }
+        if(LecturerData.length>=1){
+            for(var o in LecturerData)
+            {
+            var LecturerTabPageId= "LecturerTabPage"+LecturerData[o].id;
+            $("#LecturerTab").append("<li><a href='#"+LecturerTabPageId+"' data-toggle='tab'>"+ LecturerData[o].id +"</a></li>");
+            $("#LecturerTabContent").append("<div class='tab-pane fade in active' id='"+LecturerTabPageId+"'></div>");
+            $("#"+LecturerTabPageId).append("<img class='LecturerTabPageImg' src='"+LecturerData[o].ImgSrc +"'/>");
+            $("#"+LecturerTabPageId).append("<div class='LecturerTabPageName'>"+LecturerData[o].name+"</div>");
+            $("#"+LecturerTabPageId).append("<div class='LecturerTabPageJob'>"+LecturerData[o].job+"</div>");
+            $("#"+LecturerTabPageId).append("<textarea class='LecturerTabPageSummary'>"+LecturerData[o].summary+"</textarea>");
+            $("#"+LecturerTabPageId).append("<div class='btn-group btn-group-md LecturerTabPageBtnGroup'></div>");
+            $("#"+LecturerTabPageId).children(".btn-group").append("<button type='button' class='btn btn-primary' onclick='$.SelectLecturerInfo("+(LecturerData[o].index)+")'>选中</button>");
+            $("#"+LecturerTabPageId).children(".btn-group").append("<button type='button' class='btn btn-primary' onclick='$.AddLecturer()')'>新建</button>");
+            }
+        }
+        if(LecturerData.length==0&&ThisLecturerData.length==0){
+            $("#LecturerTabBox").hide();
+            $("#LecturerInfoBox").show();
+            $("#LecturerUpdateBtn").show();
+            $("#LecturerReSelectBtn").hide();
+        }
+        $(function () {
+            $('#LecturerTab li:eq(0) a').tab('show');
+        });
+        //
         /*按钮事件 OP*/
         //var csrftoken = $.cookie('csrftoken');//引入其他js后$失效
         var csrftoken=getCookie('csrftoken');
@@ -304,6 +448,9 @@
             });
         }); */
         $("#PassBtn").click(function () {
+            if (TempletType=="NoSlide"){
+                $.SubmitCourseForm("pass");
+            }
             var JsonData = { "id": CourseId, "PageCount": 0 };
                 $.ajax({
                     type: 'POST',
@@ -318,6 +465,32 @@
                             $("#PassPostbackNotice").show();
                             $("#PassPostbackNotice").text("基线测试通过，准备跳转").hide(3000);
                             $.SubmitCourseForm("pass");
+                        }
+                        else {
+                            $("#PassPostbackNotice").show();
+                            $("#PassPostbackNotice").text(data["res"]).hide(5000);
+                        }
+                    }
+                });
+        });
+        $("#MakeBtn").click(function () {
+            if (TempletType=="NoSlide"){
+                $.SubmitCourseForm("make");
+            }
+            var JsonData = { "id": CourseId, "PageCount": 0 };
+                $.ajax({
+                    type: 'POST',
+                    url: "/SubCheck/",
+                    data: JSON.stringify(JsonData),
+                    dataType: "json",
+                    beforeSend: function (xhr, settings) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    },
+                    success: function (data) {
+                        if (data["res"] == "pass") {
+                            $("#PassPostbackNotice").show();
+                            $("#PassPostbackNotice").text("基线测试通过，准备跳转").hide(3000);
+                            $.SubmitCourseForm("make");
                         }
                         else {
                             $("#PassPostbackNotice").show();
@@ -439,11 +612,12 @@
         $("#TYCategoryInput").attr("value", JSON.stringify(TYJson));
         $("#DZCategoryInput").attr("value", JSON.stringify(DZJson));
         $("#GXCategoryInput").attr("value", JSON.stringify(GXJson));
-        if ($("#CourseTitle").val()==""||$("#CourseTitle").val()=="None"||$("#CourseTitle").val() == null
+        if (($("#CourseTitle").val()==""||$("#CourseTitle").val()=="None"||$("#CourseTitle").val() == null
             ||$("#CourseGroup").val()==""||$("#CourseGroup").val()=="None"||$("#CourseGroup").val() == null
             //||$("KeyWords").val()==""||$("#KeyWords").val()=="None"||$("#KeyWords").val() == null
-            ||$("#DicCategoryInput").val()=="[]"||$("#TYCategoryInput").val()=="[]"||$("#DZCategoryInput").val()=="[]"
-        )
+            ||$("#DicCategoryInput").val()=="[]"||$("#TYCategoryInput").val()=="[]"
+            //||$("#DZCategoryInput").val()=="[]"
+            )&& mode=="pass")
         {
             $("#PassPostbackNotice").text("填写不完整").hide(10000);
         }
@@ -451,6 +625,115 @@
         $("#CourseInfoForm").submit();
         }
     };
+    //
+    $.SelectLecturerInfo=function (DataId){
+        $("#LecturerTabBox").hide();
+        $("#LecturerInfoBox").show();
+        $("#LecturerUpdateBtn").show();
+        $("#LecturerReSelectBtn").show();
+        $("#LecturerPic").attr("src",LecturerData[DataId].ImgSrc);
+        $("#LecturerNameInput").text(LecturerData[DataId].name);
+        $("#LecturerJobInput").text(LecturerData[DataId].job);
+        $("#LecturerSummaryText").text(LecturerData[DataId].summary);
+        CurrentLecturerId=LecturerData[DataId].id;
+    };
+    //
+    $.ReSelectLecturer=function (){
+        $("#LecturerTabBox").show();
+        $("#LecturerInfoBox").hide();
+        $("#LecturerUpdateBtn").hide();
+        $("#LecturerReSelectBtn").hide();
+    };
+    $.AddLecturer=function (){
+        CurrentLecturerId='';
+        $("#LecturerTabBox").hide();
+        $("#LecturerInfoBox").show();
+        $("#LecturerUpdateBtn").show();
+        $("#LecturerReSelectBtn").hide();
+        //$("#LecturerPic").attr("src",'{{temvarPicFilePath}}');
+        $("#LecturerNameInput").text('填姓名');
+        $("#LecturerJobInput").text('填职务');
+        $("#LecturerSummaryText").text('');
+    };
+    $.UpdateLecturer=function (){
+        var form = new FormData(); 
+        form.append("id",CurrentLecturerId);
+        /*if ($("#LecturerPhotoInput").val() !='')
+        {
+            form.append("LecturerPhotoInput",$("#LecturerPhotoInput")[0].files[0]);
+        }*/
+        form.append('LecturerNameInput', $("#LecturerNameInput").text().trim());
+        form.append('LecturerJobInput', $("#LecturerJobInput").text().trim());
+        if ($("#LecturerSummaryText").val() && $("#LecturerSummaryText").val()!="")
+        {
+            form.append('LecturerSummaryText', $("#LecturerSummaryText").val().replace(/\r\n/g,'').replace(/\n/g,''));
+        }
+        else
+        {
+            form.append('LecturerSummaryText', $("#LecturerSummaryText").text().replace(/\r\n/g,'').replace(/\n/g,''));
+        }
+        form.append('CourseId',CourseId);
+        //Ajax提交
+        var csrftoken = $.cookie('csrftoken');
+        $.ajax({
+            url: "/UpdateLecturer/",//无结尾斜线：You called this URL via POST, but the URL doesn't end in a slash
+            type: "POST",
+            data: form,
+            async: true,         //异步
+            processData: false,  //很重要，告诉jquery不要对form进行处理
+            contentType: false,  //很重要，指定为false才能形成正确的Content-Type
+            //timeout: 3000000, //超时时间：30秒
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            },
+            success: function (result) {
+                r=JSON.parse(result);
+                if (r['res']=="success"){
+                    CurrentLecturerId=r['id']
+                    $("#LecturerReSelectBtn").hide();
+                    $("#LecturerSendRes").show();
+                    $("#LecturerSendRes").text('已保存!').hide(50000);
+                    //console.debug("lecturer");
+                    //$("#LecturerPic").attr("src",r['PicSrc']);
+                }
+                else{ 
+                    $("#LecturerSendRes").show();
+                    $("#LecturerSendRes").text(r['res']).hide(50000);
+                }
+            }
+        });
+    };
+    $.UpdateCourseAbstract = function () {
+        var csrftoken = $.cookie('csrftoken');
+        var keywords= $("#KeyWordsInput").val();
+        var JsonData = {"id": CourseId,"KeyWords":keywords,"AbstractText":[]};
+        var i=1;
+        $("#CourseAbstractbox textarea").each(function()
+        {
+            //text() chrome不更新
+            JsonData["AbstractText"].push({"index":i,"text": $(this).val().replace(/\r\n/g,'').replace(/\n/g,'')});
+            i++;
+        });
+        $.ajax({
+            type: 'POST',
+            url: "/UpdateCourseAbstract/",
+            data: JSON.stringify( JsonData),
+            dataType: "json",
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            },
+            success: function (data) {
+                if(data["res"]=="success")
+                {
+                    $("#SaveAbstractDataState").show();
+                    $("#SaveAbstractDataState").text("保存成功！").hide(5000);
+                }
+                //alert("已保存"); // 
+                //console.log(data.status); // 
+            }
+        });
+    };
+    //
     //GetQuery
     (function ($) {
             $.getUrlParam
@@ -463,6 +746,19 @@
                     if (r != null) return unescape(r[2]); return null;
                 }
         })(jQuery);
+    //GetCookie
+    function getCookie(c_name) {
+        if (document.cookie.length > 0) {
+            c_start = document.cookie.indexOf(c_name + "=")
+            if (c_start != -1) {
+                c_start = c_start + c_name.length + 1
+                c_end = document.cookie.indexOf(";", c_start)
+                if (c_end == -1) c_end = document.cookie.length
+                return unescape(document.cookie.substring(c_start, c_end))
+            }
+        }
+        return ""
+    }
     //GetCookie
         function getCookie(c_name) {
             if (document.cookie.length > 0) {
@@ -500,12 +796,30 @@
                 <span class="input-group-addon">专题</span>
                 <input id="CourseGroup" name="groupName" type="text" class="form-control" placeholder="" required="required" value="{{temvarGroupName}}">
             </div>
-            <br>
+            <br/>
             {% comment %} <div class="input-group">
                 <span class="input-group-addon">关键字(多个关键字用空格分隔)</span>
                 <input id="KeyWords" name="keyWords" type="text" class="form-control" placeholder="" required="required" value="{{temvarKeyWords}}">
             </div> {% endcomment %}
-            <br>
+            <br/>
+            <div class="input-group">
+                <span class="input-group-addon">时间（无特殊需求可留空）</span>
+                <input type="text" class="form-control" id="makedatetimepicker" name="makeDate" value="{{temvarMakeDate|date:'Y-m-d H:i:s' }}">
+            </div>
+            <br/>
+            <div class="input-group">
+                <span class="input-group-addon">来源</span>
+                <select id="SourceType" name="sourceType" class="form-control"  required="required">
+                    <option value="" selected="selected">选择来源类型</option>
+                    <option value="a">自筹</option>
+                    <option value="b">外拍</option>
+                    <option value="c">采购</option>
+                    <option value="s">单改三</option>
+                    <option value="d">客户订制</option>
+                    <option value="NorthOnly">客户项目</option>
+                </select>
+            </div>
+            <br/>    
             <div class="input-group">
                 <select id="InternalCategory" name="internalCategory" class="form-control"  required="required">
                     <option value="" selected="selected">选择一级内部分类</option>
@@ -532,7 +846,8 @@
             <br>
             <div class="btn-group btn-group-md">
                 <button id="SaveBtn" type="button" class="btn btn-primary">保存</button>
-                <button id="PassBtn" type="button" class="btn btn-primary">发布（加入制作队列）</button>
+                <button id="MakeBtn" type="button" class="btn btn-primary">审核通过（不发布）</button>
+                <button id="PassBtn" type="button" class="btn btn-primary">审核并发布</button>
             </div>
             <div id="PassPostbackNotice"></div>
         </form>
@@ -543,6 +858,42 @@
             <div id="LecturerJobInput" class="LecturerJob" contenteditable="true">{{temvarLecturerPost}}</div>
             <textarea id="LecturerSummaryText" class="LecturerTabPageSummary">{{temvarLecturerIntro}}</textarea>
     </div> {% endcomment %}
+    <div id="LecturerBox"  class="input-group">
+        <label for="name">讲师信息：</label>
+        <div id="LecturerTabBox" style="width:420px;">
+            <ul id="LecturerTab" class="nav nav-tabs">
+            </ul>
+            <div id="LecturerTabContent" class="tab-content">
+            </div>
+        </div>
+        <div id="LecturerInfoBox" style="">
+            <img id="LecturerPic" class='LecturerTabPageImg' src='' style="display:none"/>
+            <div id="LecturerNameInput" class="LecturerName" contenteditable="true" placeholder="请填写姓名"></div>
+            <div id="LecturerJobInput" class="LecturerJob" contenteditable="true" placeholder="请填写职务"></div>
+            <div>讲师简介：</div>
+            <textarea id="LecturerSummaryText" class="LecturerTabPageSummary"></textarea>
+        </div>
+        <br> 
+        <div class="btn-group btn-group-md">
+            <button id="LecturerUpdateBtn" type="button" class="btn btn-primary" style="display:none" onclick="$.UpdateLecturer();">保存</button>
+            <button id="LecturerReSelectBtn" type="button" class="btn btn-primary" style="display:none" onclick="$.ReSelectLecturer()">重选</button>
+            <button id="LecturerAddBtn" type="button" class="btn btn-primary" style="display:none" onclick="$.AddLecturer()">添加</button>
+        </div>
+        <div id="LecturerSendRes">_</div>
+        <div class="input-group">
+            <label>关键字(多个关键字用空格分隔)</label><br/>
+            <input id="KeyWordsInput" name="keyWords" type="text" class="form-control" size="50" placeholder="" required="required" value="{{temvarKeyWords}}">
+        </div>
+        <div id="CourseAbstractBox" class="input-group">
+            <label for="name">课程简介（不分段）</label><br/>
+            <textarea id="CourseAbstractText" class="form-control"></textarea>
+        </div>
+        <br>
+        <div class="btn-group btn-group-md">
+            <button id="" type="button" class="btn btn-primary" onclick="$.UpdateCourseAbstract()">保存</button>
+        </div>
+        <div id="SaveAbstractDataState"></div>
+    </div>
     <div class="TreeArea">
     <div class="TreeBox">
         <div>知识树</div>

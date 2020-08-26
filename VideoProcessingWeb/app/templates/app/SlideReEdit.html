@@ -893,7 +893,7 @@
         var csrftoken = $.cookie('csrftoken');
         $.ajax({
             type: 'POST',
-            url: "/JsonDataSave/?mode="+mode+"&id="+CourseId,
+            url: "/JsonDataSaveReEdit/?mode="+mode+"&id="+CourseId,
             data: JSON.stringify(JsonData),
             beforeSend: function (xhr, settings) {
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);
@@ -905,7 +905,7 @@
                 }
                 $("#NoticeBox").show();
                 $("#NoticeBox").text("已保存").hide(5000);
-                //console.log(data.status); 
+                console.log(data); 
             },
             error: function () {
                 alert('出现错误');
@@ -1419,7 +1419,7 @@
                             //form.append("SlideUploadInput",$("#SlideUploadInput")[0].files[0]);
                             var csrftoken = $.cookie('csrftoken');
                             $.ajax({
-                                url: "/SlideUpload/",//无结尾斜线：You called this URL via POST, but the URL doesn't end in a slash
+                                url: "/SlideReUpload/",//无结尾斜线：You called this URL via POST, but the URL doesn't end in a slash
                                 type: "POST",
                                 data: form,
                                 async: true,         //异步
@@ -1449,6 +1449,32 @@
                 }
             }
         };
+    $.FinishRemake=function (){
+        var csrftoken = $.cookie('csrftoken');
+        $.ajax({
+            url: "/CourseMake/?mode=remake&id="+CourseId,//无结尾斜线：You called this URL via POST, but the URL doesn't end in a slash
+            type: "GET",
+            data: "",
+            async: true,         //异步
+            processData: false,  //很重要，告诉jquery不要对form进行处理
+            contentType: false,  //很重要，指定为false才能形成正确的Content-Type
+            //timeout: 3000000, //超时时间：30秒
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            },
+            success: function (result) {
+                r=JSON.parse(result);
+                if (r['res']=="success"){
+                    $("#NoticeBox").show();
+                    $("#NoticeBox").text("已提交").hide(5000);
+                }
+                else{ 
+                    $("#NoticeBox").show();
+                    $("#NoticeBox").text(r['state']).hide(5000);
+                }
+            }
+        });
+    };
     //GetQuery
     (function ($) {
             $.getUrlParam
@@ -1511,31 +1537,8 @@
         }
         return ""
     }
-    // 
+    //
     function exportData(id){
-        var data= getTextData();
-        if(window.navigator.msSaveOrOpenBlob){
-            // 兼容ie11
-            try{
-                var blobObject = new Blob([data]); 
-                window.navigator.msSaveOrOpenBlob(blobObject, id+"_captions.json"); 
-            }
-            catch(e){
-                console.log(e);
-            }
-        }
-        else{
-            var blob = new Blob([data]); 
-            var a = document.createElement('a');
-            a.href = URL.createObjectURL(blob); // xhr.response is a blob
-            a.download = id+"_captions.json";
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        }
-    } 
-    function getTextData(){
         //Get Data OP
         var JsonData = [];
         var ItemCount = 1;
@@ -1575,7 +1578,30 @@
             JsonData.push(ThisItem);
         });
         //Get Data ED
-        return JSON.stringify(JsonData)
+        if(window.navigator.msSaveOrOpenBlob){
+            // 兼容ie11
+            try{
+                var blobObject = new Blob([JSON.stringify(JsonData)]); 
+                window.navigator.msSaveOrOpenBlob(blobObject, id+"_captions.json"); 
+            }
+            catch(e){
+                console.log(e);
+            }
+        }
+        else{
+            var blob = new Blob([JSON.stringify(JsonData)]); 
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); // xhr.response is a blob
+            a.download = id+"_captions.json";
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+    } 
+
+    function getTextData(){
+        
     }
         function myBrowser() {
             var userAgent = navigator.userAgent; //取得浏览器的userAgent字符串
@@ -1768,7 +1794,8 @@
                 <button id="SaveDataBtn" type="button" class="btn btn-primary" onclick="$.SaveJsonData('savebtn')">保存</button>
                 <button id="PassBtn" type="button" class="btn btn-primary">测试</button>
                 <button id="" type="button" class="btn btn-primary" onclick="$.RestoreJsonData()">还原文稿</button>
-                <button id="" type="button" class="btn btn-primary" onclick="$.EditInfo()">编辑属性</button>
+                <!--<button id="" type="button" class="btn btn-primary" onclick="$.EditInfo()">编辑属性</button>-->
+                <button id="" type="button" class="btn btn-primary" onclick="$.FinishRemake()">完成</button>
         </div>
         
         <div id="FullTextPanel" class="clearfix">
